@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 enum Move { rotatLeft, rotatRight, moveFoward, repet }
 
-IconData getIconData(Move move) {
-  switch (move) {
+IconData getIconData(Move action) {
+  switch (action) {
     case Move.moveFoward:
       return Icons.arrow_upward;
     case Move.repet:

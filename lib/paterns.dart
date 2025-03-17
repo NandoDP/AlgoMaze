@@ -1,12 +1,11 @@
-import 'dart:math';
-
 import 'package:puzzle/actions.dart';
 
 const Map<String, dynamic> patern1 = {
+  'niveau': 1, 
   'turquoiseTiles': [
     [5, 7], [6, 7], [7, 7], [8, 7], [9, 7], 
   ],
-  'angle': 1 * pi/2,
+  'direction': 1,
   'buttons': [Move.moveFoward, Move.repet],
   'number': 2,
   'diamant': [5, 7],
@@ -14,6 +13,7 @@ const Map<String, dynamic> patern1 = {
 };
 
 const Map<String, dynamic> patern3 = {
+  'niveau': 3, 
   'turquoiseTiles': [
     [10, 2], [10, 1], //
     [9, 3], [9, 2], //
@@ -27,7 +27,9 @@ const Map<String, dynamic> patern3 = {
     [9, 12], [9, 13], //
     [10, 13], [10, 14], //
   ],
-  'angle': 3 * pi/2,
+  'direction': 2,
+  'buttons': [Move.moveFoward, Move.rotatLeft, Move.rotatRight, Move.repet],
+  'steps': 5,
   'orangeTiles': [
     [4, 7],
     [4, 8]

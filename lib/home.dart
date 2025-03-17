@@ -1,8 +1,17 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:puzzle/actions.dart';
 import 'package:puzzle/paterns.dart';
+
+class PathStep {
+  final List<int> position;
+  final int direction;
+  final bool isRotation;
+
+  PathStep(this.position, this.direction, {this.isRotation = false});
+}
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -15,6 +24,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   // Taille de la grille
   final int gridSize = 16;
   List<dynamic> actions = [];
+  List<List<dynamic>> allActions = [];
 
   // Chemin
   late List<List<int>> turquoiseTiles;
@@ -23,34 +33,43 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   // Position de depart et position de la cible
   late List<int> diamant;
   late List<int> star;
+  late int level;
 
-  late List<List<int>> diamondPath;
+  late List<PathStep> diamondPath;
+  late Map<String, dynamic> patern;
 
-  // Animation variables
-  late AnimationController _controller;
-  late List<Animation<Offset>> _animations;
-  List<Offset> _pathPoints = [];
+  // Variables animation
+  late AnimationController _positionController;
+  late AnimationController _rotationController;
+  late Animation<double> _rotationAnimation;
+  late int _currentDirection;
+  List<Offset> _points = [];
+  List<double> _angles = [];
+  int _currentStepIndex = 0;
   bool _isAnimating = false;
-  int _currentPointIndex = 0;
 
-  // Timer variables
+  // Variables de temps
   late Timer _timer;
-  int _timeRemaining = 3600; // 1 heure en secondes
+  int _timeRemaining = 3600;
   String _timeDisplay = "1:00:00";
   bool _gameOver = false;
 
   @override
   void initState() {
     super.initState();
-    
+
     // Initialiser le timer
     startTimer();
 
-    turquoiseTiles = patern1['turquoiseTiles'];
-    orangeTiles = patern1['orangeTiles'] ?? [];
-    diamant = patern1['diamant'];
-    star = patern1['star'];
-    diamondPath = [diamant];
+    patern = patern3;
+
+    turquoiseTiles = patern['turquoiseTiles'];
+    orangeTiles = patern['orangeTiles'] ?? [];
+    diamant = patern['diamant'];
+    star = patern['star'];
+    _currentDirection = patern['direction'];
+    level = patern['niveau'];
+    diamondPath = [PathStep(diamant, _currentDirection)];
   }
 
   void startTimer() {
@@ -69,14 +88,15 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       }
     });
   }
-  
+
   void _updateTimeDisplay() {
     int hours = _timeRemaining ~/ 3600;
     int minutes = (_timeRemaining % 3600) ~/ 60;
     int seconds = _timeRemaining % 60;
-    _timeDisplay = "$hours:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}";
+    _timeDisplay =
+        "$hours:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}";
   }
-  
+
   void _showGameOverDialog() {
     showDialog(
       context: context,
@@ -104,66 +124,175 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     );
   }
 
+  void addPointToPath() {
+    // if (actions.isEmpty)  return;
+    actions.forEach((action) {
+      final lastStep = diamondPath.last;
+      final lastPosition = lastStep.position;
+      var currentDirection = lastStep.direction;
+
+      if (!containsPosition(lastPosition)) return;
+
+      setState(() {
+        if (action != Move.repet) {
+          allActions.add([action, const Color(0xFF212121)]);
+        }
+      });
+
+      if ((lastPosition[0] != star[0]) || (lastPosition[1] != star[1])) {
+        if (action == Move.moveFoward) {
+          List<int> newPosition;
+          switch (currentDirection) {
+            case 0: // Up
+              newPosition = [lastPosition[0], lastPosition[1] - 1];
+              break;
+            case 1: // Right
+              newPosition = [lastPosition[0] + 1, lastPosition[1]];
+              break;
+            case 2: // Down
+              newPosition = [lastPosition[0], lastPosition[1] + 1];
+              break;
+            case 3: // Left
+              newPosition = [lastPosition[0] - 1, lastPosition[1]];
+              break;
+            default:
+              newPosition = lastPosition;
+          }
+
+          setState(() {
+            diamondPath.add(PathStep(newPosition, currentDirection));
+          });
+          if (!containsPosition(newPosition)) return;
+        } else if (action == Move.rotatLeft) {
+          final newDirection = (currentDirection + 3) % 4;
+          setState(() {
+            diamondPath.add(PathStep(List.from(lastPosition), newDirection,
+                isRotation: true));
+          });
+        } else if (action == Move.rotatRight) {
+          final newDirection = (currentDirection + 1) % 4;
+          setState(() {
+            diamondPath.add(PathStep(List.from(lastPosition), newDirection,
+                isRotation: true));
+          });
+        } else if (action == Move.repet) {
+          addPointToPath();
+          return;
+        }
+      }
+    });
+  }
+
   void _setupAnimations() {
-    _animations = [];
-
-    // Convertir les positions de grille en points de chemin
-    _pathPoints = [];
-    for (var pos in diamondPath) {
-      _pathPoints.add(Offset(pos[0].toDouble(), pos[1].toDouble()));
-    }
-
-    // Initialiser l'animation
-    _controller = AnimationController(
-      duration: const Duration(seconds: 2),
+    // Initialiser les controllers
+    _positionController = AnimationController(
+      duration: const Duration(milliseconds: 3000),
       vsync: this,
     );
 
-    for (int i = 0; i < _pathPoints.length - 1; i++) {
-      final begin = _pathPoints[i];
-      final end = _pathPoints[i + 1];
+    _rotationController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+
+    // Créer une liste de mouvement uniquement pour l'animation de position
+    List<PathStep> movementSteps =
+        diamondPath.where((step) => !step.isRotation).toList();
+
+    // Convertir les étapes de mouvement en points
+    _points = movementSteps
+        .map((step) =>
+            Offset(step.position[0].toDouble(), step.position[1].toDouble()))
+        .toList();
+
+    // Créer une liste d'angles
+    _angles = diamondPath.map((step) => step.direction * (pi / 2)).toList();
+
+    // Configurer les animations de position
+    List<Animation<Offset>> positionAnimations = [];
+    for (int i = 0; i < _points.length - 1; i++) {
+      final begin = _points[i];
+      final end = _points[i + 1];
 
       final animation = Tween<Offset>(
         begin: begin,
         end: end,
       ).animate(
         CurvedAnimation(
-          parent: _controller,
+          parent: _positionController,
           curve: Interval(
-            i / (_pathPoints.length - 1),
-            (i + 1) / (_pathPoints.length - 1),
+            i / (_points.length - 1),
+            (i + 1) / (_points.length - 1),
             curve: Curves.linear,
           ),
         ),
       );
 
-      _animations.add(animation);
-
-      animation.addListener(() {
-        setState(() {
-          if (_isAnimating && _currentPointIndex == i) {
-            // Mettre à jour la position du diamant pendant l'animation
-            diamant = [animation.value.dx.round(), animation.value.dy.round()];
-
-            // Passer au segment suivant si ce segment est termine
-            if (animation.value == end) {
-              _currentPointIndex = i + 1;
-            }
-          }
-        });
-      });
+      positionAnimations.add(animation);
     }
 
-    _controller.addStatusListener((status) {
+    // Ecouter les animations
+    _positionController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         setState(() {
           _isAnimating = false;
-          _currentPointIndex = 0;
-          // Remettre le diamant à sa position initiale après l'animation
-          diamant = List.from(diamondPath[0]);
+          _currentStepIndex = 0;
+          diamant = List.from(diamondPath[0].position);
+          _currentDirection = diamondPath[0].direction;
         });
-        _controller.reset();
+        _positionController.reset();
+        _rotationController.reset();
       }
+    });
+
+    // Update l'état en fonction de l'étape d'animation
+    _positionController.addListener(() {
+      setState(() {
+        if (_isAnimating) {
+          // Trouver le segment actuel
+          double animValue = _positionController.value;
+          int segmentIndex = (animValue * (positionAnimations.length)).floor();
+          segmentIndex = segmentIndex.clamp(0, positionAnimations.length - 1);
+
+          // Update la position du diamant en fonction du segment actuel
+          if (segmentIndex < positionAnimations.length) {
+            final animation = positionAnimations[segmentIndex];
+            diamant = [animation.value.dx.round(), animation.value.dy.round()];
+
+            if (containsPosition(diamant)) {
+              allActions[segmentIndex][1] = Colors.green;
+            } else {
+              allActions[segmentIndex][1] = Colors.redAccent;
+            }
+          }
+        }
+      });
+    });
+
+    // Configurer les animations de rotation
+    _rotationAnimation = Tween<double>(
+      begin: _angles.first,
+      end: _angles.last,
+    ).animate(_rotationController);
+
+    _rotationController.addListener(() {
+      setState(() {
+        if (_isAnimating) {
+          // Trouver l'étape de rotation actuelle
+          double fraction = _rotationController.value;
+          int stepIndex = (fraction * (_angles.length - 1)).floor();
+          stepIndex = stepIndex.clamp(0, _angles.length - 2);
+
+          // Calculer l'angle de rotation
+          double startAngle = _angles[stepIndex];
+          double endAngle = _angles[stepIndex + 1];
+          double localFraction = (fraction * (_angles.length - 1)) - stepIndex;
+
+          double currentAngle =
+              startAngle + (endAngle - startAngle) * localFraction;
+          _currentDirection = ((currentAngle / (pi / 2)) % 4).round();
+        }
+      });
     });
   }
 
@@ -171,36 +300,28 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     _setupAnimations();
     setState(() {
       _isAnimating = true;
-      _currentPointIndex = 0;
+      _currentStepIndex = 0;
     });
-    _controller.forward(from: 0.0);
+
+    // Demarer les animations
+    _positionController.forward(from: 0.0);
+    _rotationController.forward(from: 0.0);
   }
 
-  void addPointToPath() {
-    for (var action in actions) {
-      final lastPosition = diamondPath.last;
-      if ((lastPosition[0] != star[0]) || (lastPosition[1] != star[1])) {
-        if (action == Move.moveFoward) {
-          setState(() {
-            diamondPath.add([lastPosition[0] + 1, lastPosition[1]]);
-          });
-        } else if (action == Move.repet) {
-          if (diamondPath.length > 10) {
-            return;
-          }
-          addPointToPath();
-          return;
-        }
-      } else {
-        return;
+  bool containsPosition(List<int> position) {
+    for (var tile in turquoiseTiles) {
+      if (tile[0] == position[0] && tile[1] == position[1]) {
+        return true;
       }
     }
+    return false;
   }
 
   @override
   void dispose() {
     _timer.cancel();
-    _controller.dispose();
+    _positionController.dispose();
+    _rotationController.dispose();
     super.dispose();
   }
 
@@ -239,14 +360,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _timeDisplay, 
+                    _timeDisplay,
                     style: TextStyle(
-                      fontSize: 22, 
-                      color: _timeRemaining < 300 ? Colors.red : Colors.white70
-                    )
+                      fontSize: 22,
+                      color: _timeRemaining < 300 ? Colors.red : Colors.white70,
+                    ),
                   ),
                   Text(
-                    "Niveau 1",
+                    "Niveau $level",
                     style: TextStyle(fontSize: 24, color: Colors.white70),
                   ),
                 ],
@@ -263,15 +384,30 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 onPressed: () {
                   if (!_isAnimating) {
                     setState(() {
-                      diamondPath = [diamant];
+                      diamondPath = [PathStep(diamant, _currentDirection)];
+                      allActions = [];
                     });
                     addPointToPath();
-                    _startAnimation();
+                    if (actions.isNotEmpty) {
+                      _startAnimation();
+                    }
                   }
                 },
               ),
               ControlButton(Icons.arrow_forward, Colors.white),
-              ControlButton(Icons.refresh, Colors.white),
+              ControlButton(
+                Icons.refresh,
+                Colors.white,
+                onPressed: () {
+                  if (!_isAnimating) {
+                    setState(() {
+                      diamondPath = [PathStep(diamant, _currentDirection)];
+                      actions = [];
+                      allActions = [];
+                    });
+                  }
+                },
+              ),
               ControlButton(Icons.close, Colors.white),
               ControlButton(Icons.layers, Colors.white),
             ],
@@ -316,8 +452,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                     if (col == diamant[0] && row == diamant[1]) {
                       // Depart
                       tileColor = Colors.teal;
+                      // Calculer l'angle en fonction de la direction
+                      double angle = _currentDirection * (pi / 2);
                       tileContent = Transform.rotate(
-                        angle: patern1['angle'],
+                        angle: angle,
                         child: Icon(
                           Icons.navigation,
                           color: Colors.white,
@@ -347,14 +485,28 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             ),
           ),
 
+          Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: allActions.isEmpty
+                ? [SizedBox(height: 30)]
+                : allActions
+                    .map((action) => ControlButton(
+                          getIconData(action[0]),
+                          Colors.white,
+                          width: 20,
+                          decoColor: action[1],
+                        ))
+                    .toList(),
+          ),
+
           // Buttons de controle
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              for (var button in patern1['buttons'])
+              for (var button in patern['buttons'])
                 InkWell(
                   onTap: () => setState(() {
-                    if (actions.length < patern1['number']) actions.add(button);
+                    if (actions.length < patern['steps']) actions.add(button);
                   }),
                   child: Container(
                     margin: EdgeInsets.symmetric(vertical: 10, horizontal: 2),
@@ -399,22 +551,29 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 class ControlButton extends StatelessWidget {
   final IconData icon;
   final Color color;
+  final Color? decoColor;
+  final double? width;
   final VoidCallback? onPressed;
 
-  ControlButton(this.icon, this.color, {this.onPressed});
+  ControlButton(this.icon, this.color,
+      {this.onPressed, this.width, this.decoColor});
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onPressed,
       child: Container(
-        width: 40,
-        height: 40,
+        width: width ?? 40,
+        height: width ?? 40,
         margin: EdgeInsets.all(5),
         decoration: BoxDecoration(
-          color: const Color(0xFF212121),
+          color: decoColor ?? const Color(0xFF212121),
         ),
-        child: Icon(icon, color: color),
+        child: Icon(
+          icon,
+          color: color,
+          size: width != null ? 16 * width! / 40 : 14,
+        ),
       ),
     );
   }
