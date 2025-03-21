@@ -1,23 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:puzzle/home.dart';
+import 'package:puzzle/player-model.dart';
 
-void main() {
-  runApp(const MyApp());
+Future<void> main() async {
+  final playerStats = await PlayerStatsManager.loadStats();
+
+  runApp(MyApp(playerStats: playerStats));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  PlayerStats playerStats;
+  MyApp({super.key, required this.playerStats});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Algo Maze',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+        primaryColor: const Color(0xFF00CCAA),
+        scaffoldBackgroundColor: const Color(0xFF1A1A2E),
+        brightness: Brightness.dark,
       ),
-      home: const GameScreen(),
+      home: HomeScreen(playerStats: playerStats),
     );
   }
 }

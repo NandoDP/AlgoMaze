@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 enum Move { rotatLeft, rotatRight, moveFoward, repet }
 
+// Tablette: 926 x 600
+// Phone: 807 x 383
+
 IconData getIconData(Move action) {
   switch (action) {
     case Move.moveFoward:

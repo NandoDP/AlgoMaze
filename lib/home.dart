@@ -1,636 +1,570 @@
-import 'dart:async';
-import 'dart:math';
-
+// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:flutter/material.dart';
-import 'package:puzzle/actions.dart';
+import 'package:percent_indicator/linear_percent_indicator.dart';
+
+import 'package:puzzle/game_page.dart';
 import 'package:puzzle/paterns.dart';
+import 'package:puzzle/player-model.dart';
 
-class PathStep {
-  final List<int> position;
-  final int direction;
-  final bool isRotation;
-
-  PathStep(this.position, this.direction, {this.isRotation = false});
-}
-
-class GameScreen extends StatefulWidget {
-  const GameScreen({super.key});
+class HomeScreen extends StatefulWidget {
+  PlayerStats playerStats;
+  HomeScreen({super.key, required this.playerStats});
 
   @override
-  State<GameScreen> createState() => _GameScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
-  // Taille de la grille
-  final int gridSize = 16;
-  List<dynamic> actions = [];
-  List<List<dynamic>> allActions = [];
-
-  // Chemin
-  late List<List<int>> turquoiseTiles;
-  late List<List<int>> orangeTiles;
-
-  // Position de depart et position de la cible
-  late List<int> diamant;
-  late List<int> star;
-  late int level;
-
-  late List<PathStep> diamondPath;
-  late Map<String, dynamic> patern;
-
-  // Variables animation
-  late AnimationController _positionController;
-  late AnimationController _rotationController;
-  late Animation<double> _rotationAnimation;
-  late int _currentDirection;
-  List<Offset> _points = [];
-  List<double> _angles = [];
-  int _currentStepIndex = 0;
-  bool _isAnimating = false;
-
-  // Variables de temps
-  late Timer _timer;
-  int _timeRemaining = 3600;
-  String _timeDisplay = "1:00:00";
-  bool _gameOver = false;
+class _HomeScreenState extends State<HomeScreen> {
+  PlayerStats? _playerStats;
+  bool firstTime = true;
 
   @override
   void initState() {
     super.initState();
-
-    // Initialiser le timer
-    startTimer();
-
-    patern = patern3;
-
-    turquoiseTiles = patern['turquoiseTiles'];
-    orangeTiles = patern['orangeTiles'] ?? [];
-    diamant = patern['diamant'];
-    star = patern['star'];
-    _currentDirection = patern['direction'];
-    level = patern['niveau'];
-    diamondPath = [PathStep(diamant, _currentDirection)];
+    _loadPlayerStats();
   }
 
-  void startTimer() {
-    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
-      if (_timeRemaining > 0) {
-        setState(() {
-          _timeRemaining--;
-          _updateTimeDisplay();
-        });
-      } else {
-        timer.cancel();
-        setState(() {
-          _gameOver = true;
-        });
-        _showGameOverDialog();
-      }
-    });
-  }
-
-  void _updateTimeDisplay() {
-    int hours = _timeRemaining ~/ 3600;
-    int minutes = (_timeRemaining % 3600) ~/ 60;
-    int seconds = _timeRemaining % 60;
-    _timeDisplay =
-        "$hours:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}";
-  }
-
-  void _showGameOverDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Temps écoulé!', style: TextStyle(color: Colors.red)),
-          content: Text('Vous avez perdu. Le temps imparti est écoulé.'),
-          actions: <Widget>[
-            TextButton(
-              child: Text('Réessayer'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                setState(() {
-                  _timeRemaining = 3600;
-                  _updateTimeDisplay();
-                  _gameOver = false;
-                });
-                startTimer();
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void addPointToPath() {
-    // if (actions.isEmpty)  return;
-    actions.forEach((action) {
-      final lastStep = diamondPath.last;
-      final lastPosition = lastStep.position;
-      var currentDirection = lastStep.direction;
-
-      if (!containsPosition(lastPosition)) return;
-
-      setState(() {
-        if (action != Move.repet) {
-          allActions.add([action, const Color(0xFF212121)]);
-        }
-      });
-
-      if ((lastPosition[0] != star[0]) || (lastPosition[1] != star[1])) {
-        if (action == Move.moveFoward) {
-          List<int> newPosition;
-          switch (currentDirection) {
-            case 0: // Up
-              newPosition = [lastPosition[0], lastPosition[1] - 1];
-              break;
-            case 1: // Right
-              newPosition = [lastPosition[0] + 1, lastPosition[1]];
-              break;
-            case 2: // Down
-              newPosition = [lastPosition[0], lastPosition[1] + 1];
-              break;
-            case 3: // Left
-              newPosition = [lastPosition[0] - 1, lastPosition[1]];
-              break;
-            default:
-              newPosition = lastPosition;
-          }
-
-          setState(() {
-            diamondPath.add(PathStep(newPosition, currentDirection));
-          });
-          if (!containsPosition(newPosition)) return;
-        } else if (action == Move.rotatLeft) {
-          final newDirection = (currentDirection + 3) % 4;
-          setState(() {
-            diamondPath.add(PathStep(List.from(lastPosition), newDirection,
-                isRotation: true));
-          });
-        } else if (action == Move.rotatRight) {
-          final newDirection = (currentDirection + 1) % 4;
-          setState(() {
-            diamondPath.add(PathStep(List.from(lastPosition), newDirection,
-                isRotation: true));
-          });
-        } else if (action == Move.repet) {
-          addPointToPath();
-          return;
-        }
-      }
-    });
-  }
-
-  void _setupAnimations() {
-    // Initialiser les controllers
-    _positionController = AnimationController(
-      duration: const Duration(milliseconds: 3000),
-      vsync: this,
-    );
-
-    _rotationController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
-      vsync: this,
-    );
-
-    // Créer une liste de mouvement uniquement pour l'animation de position
-    List<PathStep> movementSteps =
-        diamondPath.where((step) => !step.isRotation).toList();
-
-    // Convertir les étapes de mouvement en points
-    _points = movementSteps
-        .map((step) =>
-            Offset(step.position[0].toDouble(), step.position[1].toDouble()))
-        .toList();
-
-    // Créer une liste d'angles
-    _angles = diamondPath.map((step) => step.direction * (pi / 2)).toList();
-
-    // Configurer les animations de position
-    List<Animation<Offset>> positionAnimations = [];
-    for (int i = 0; i < _points.length - 1; i++) {
-      final begin = _points[i];
-      final end = _points[i + 1];
-
-      final animation = Tween<Offset>(
-        begin: begin,
-        end: end,
-      ).animate(
-        CurvedAnimation(
-          parent: _positionController,
-          curve: Interval(
-            i / (_points.length - 1),
-            (i + 1) / (_points.length - 1),
-            curve: Curves.linear,
-          ),
-        ),
-      );
-
-      positionAnimations.add(animation);
-    }
-
-    // Ecouter les animations
-    _positionController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        setState(() {
-          _isAnimating = false;
-          _currentStepIndex = 0;
-          diamant = List.from(diamondPath[0].position);
-          _currentDirection = diamondPath[0].direction;
-        });
-        _positionController.reset();
-        _rotationController.reset();
-      }
-    });
-
-    // Update l'état en fonction de l'étape d'animation
-    _positionController.addListener(() {
-      setState(() {
-        if (_isAnimating) {
-          // Trouver le segment actuel
-          double animValue = _positionController.value;
-          int segmentIndex = (animValue * (positionAnimations.length)).floor();
-          segmentIndex = segmentIndex.clamp(0, positionAnimations.length - 1);
-
-          // Update la position du diamant en fonction du segment actuel
-          if (segmentIndex < positionAnimations.length) {
-            final animation = positionAnimations[segmentIndex];
-            diamant = [animation.value.dx.round(), animation.value.dy.round()];
-
-            if (containsPosition(diamant)) {
-              allActions[segmentIndex][1] = Colors.green;
-            } else {
-              allActions[segmentIndex][1] = Colors.redAccent;
-            }
-          }
-        }
-      });
-    });
-
-    // Configurer les animations de rotation
-    _rotationAnimation = Tween<double>(
-      begin: _angles.first,
-      end: _angles.last,
-    ).animate(_rotationController);
-
-    _rotationController.addListener(() {
-      setState(() {
-        if (_isAnimating) {
-          // Trouver l'étape de rotation actuelle
-          double fraction = _rotationController.value;
-          int stepIndex = (fraction * (_angles.length - 1)).floor();
-          stepIndex = stepIndex.clamp(0, _angles.length - 2);
-
-          // Calculer l'angle de rotation
-          double startAngle = _angles[stepIndex];
-          double endAngle = _angles[stepIndex + 1];
-          double localFraction = (fraction * (_angles.length - 1)) - stepIndex;
-
-          double currentAngle =
-              startAngle + (endAngle - startAngle) * localFraction;
-          _currentDirection = ((currentAngle / (pi / 2)) % 4).round();
-        }
-      });
-    });
-  }
-
-  void _startAnimation() {
-    _setupAnimations();
-    setState(() {
-      _isAnimating = true;
-      _currentStepIndex = 0;
-    });
-
-    // Demarer les animations
-    _positionController.forward(from: 0.0);
-    _rotationController.forward(from: 0.0);
-  }
-
-  bool containsPosition(List<int> position) {
-    for (var tile in turquoiseTiles) {
-      if (tile[0] == position[0] && tile[1] == position[1]) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  @override
-  void dispose() {
-    _timer.cancel();
-    _positionController.dispose();
-    _rotationController.dispose();
-    super.dispose();
+  Future<void> _loadPlayerStats() async {
+    _playerStats = await PlayerStatsManager.loadStats();
+    firstTime = PlayerStatsManager.firstTime;
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Slider
-          Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-            child: SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                trackHeight: 2.0,
-                thumbShape: RoundSliderThumbShape(enabledThumbRadius: 6.0),
-              ),
-              child: Slider(
-                activeColor: Colors.white,
-                inactiveColor: Colors.grey,
-                value: _timeRemaining / 3600,
-                onChanged: (value) {},
-              ),
-            ),
-          ),
+    // Get screen size
+    final Size screenSize = MediaQuery.of(context).size;
+    final bool isSmallScreen = screenSize.width < 360;
+    final bool isLargeScreen = screenSize.width > 600;
 
-          // Temps et Niveau
-          Padding(
-            padding: const EdgeInsets.only(left: 20.0, bottom: 20.0),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _timeDisplay,
-                    style: TextStyle(
-                      fontSize: 22,
-                      color: _timeRemaining < 300 ? Colors.red : Colors.white70,
+    // Responsive dimensions
+    final double logoSize = isSmallScreen ? 45 : (isLargeScreen ? 80 : 56);
+    final double titleSize = isSmallScreen ? 28 : (isLargeScreen ? 40 : 32);
+    final double subtitleSize = isSmallScreen ? 12 : (isLargeScreen ? 18 : 14);
+    final double buttonWidth =
+        isSmallScreen ? 100 : (isLargeScreen ? 180 : 120);
+    final double buttonHeight = isSmallScreen ? 40 : (isLargeScreen ? 60 : 50);
+    final double buttonTextSize =
+        isSmallScreen ? 16 : (isLargeScreen ? 22 : 18);
+    final double topPadding = screenSize.height * 0.08;
+    final double spacing = screenSize.height * 0.03;
+
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF1A1A2E), Color(0xFF0F0F1A)],
+          ),
+        ),
+        child: SafeArea(
+          child: Stack(
+            children: [
+              CustomPaint(
+                size: Size(screenSize.width, screenSize.height),
+                painter: GridPainter(),
+              ),
+              SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: screenSize.height,
+                    maxWidth: screenSize.width,
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                        horizontal: screenSize.width * 0.05),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        SizedBox(height: topPadding),
+
+                        // Title
+                        Text(
+                          'CODE PATH',
+                          style: TextStyle(
+                            fontSize: titleSize,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF00CCAA),
+                            shadows: const [
+                              Shadow(
+                                blurRadius: 5.0,
+                                color: Colors.black45,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        Text(
+                          'Apprendre à programmer en s\'amusant',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: subtitleSize,
+                            color: Colors.grey,
+                          ),
+                        ),
+
+                        SizedBox(height: spacing * 2),
+
+                        // Game logo
+                        Container(
+                          width: logoSize,
+                          height: logoSize,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF00CCAA),
+                            borderRadius:
+                                BorderRadius.circular(logoSize * 0.09),
+                          ),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              // Diamond shape
+                              Transform.rotate(
+                                angle: 45 * 3.14159 / 180,
+                                child: Container(
+                                  width: logoSize * 0.7,
+                                  height: logoSize * 0.7,
+                                  color: const Color(0xFF1A1A2E),
+                                ),
+                              ),
+
+                              // Center dot
+                              Container(
+                                width: logoSize * 0.18,
+                                height: logoSize * 0.18,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        SizedBox(height: spacing * 2),
+
+                        // Play button
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => GameScreen(
+                                  patern:
+                                      paterns[_playerStats!.currentLevel - 1],
+                                ),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF00CCAA),
+                            foregroundColor: const Color(0xFF1A1A2E),
+                            minimumSize: Size(buttonWidth, buttonHeight),
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(buttonHeight / 2),
+                            ),
+                            elevation: 5,
+                          ),
+                          child: Text(
+                            firstTime ? 'Commencer' : 'Continuer',
+                            style: TextStyle(
+                              fontSize: buttonTextSize,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+
+                        SizedBox(height: spacing),
+
+                        ElevatedButton(
+                          onPressed: () {
+                            showLevelSelectionModal(context);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF444444),
+                            foregroundColor: Colors.white,
+                            minimumSize: Size(buttonWidth, buttonHeight),
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(buttonHeight / 2),
+                            ),
+                            elevation: 5,
+                          ),
+                          child: Text(
+                            'Nouvelle Partie',
+                            style: TextStyle(
+                              fontSize: buttonTextSize,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+
+                        SizedBox(height: 35),
+                        StatsPanel(
+                          isSmallScreen: isSmallScreen,
+                          isLargeScreen: isLargeScreen,
+                          playerStats: _playerStats ?? widget.playerStats,
+                        )
+                      ],
                     ),
                   ),
-                  Text(
-                    "Niveau $level",
-                    style: TextStyle(fontSize: 24, color: Colors.white70),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              ControlButton(
-                _isAnimating ? Icons.pause : Icons.play_arrow,
-                Colors.white,
-                onPressed: () {
-                  if (!_isAnimating) {
-                    setState(() {
-                      diamondPath = [PathStep(diamant, _currentDirection)];
-                      allActions = [];
-                    });
-                    addPointToPath();
-                    if (actions.isNotEmpty) {
-                      _startAnimation();
-                    }
-                  }
-                },
-              ),
-              ControlButton(Icons.arrow_forward, Colors.white),
-              ControlButton(
-                Icons.refresh,
-                Colors.white,
-                onPressed: () {
-                  if (!_isAnimating) {
-                    setState(() {
-                      diamondPath = [PathStep(diamant, _currentDirection)];
-                      actions = [];
-                      allActions = [];
-                    });
-                  }
-                },
-              ),
-              ControlButton(Icons.close, Colors.white),
-              ControlButton(Icons.layers, Colors.white),
             ],
           ),
+        ),
+      ),
+    );
+  }
 
-          // Grille de jeu
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: AspectRatio(
-              aspectRatio: 1.0,
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade800, width: 1),
-                ),
-                child: GridView.builder(
-                  physics: NeverScrollableScrollPhysics(),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: gridSize,
-                    childAspectRatio: 1.0,
+  void showLevelSelectionModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Color(0xFF1E1E2E),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.4,
+          padding: EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'Sélectionner un niveau',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
                   ),
-                  itemCount: gridSize * gridSize,
-                  itemBuilder: (context, index) {
-                    final row = index ~/ gridSize;
-                    final col = index % gridSize;
+                ),
+              ),
+              SizedBox(height: 16),
+              Expanded(
+                child: LevelSelectionList(
+                  playerStats: _playerStats!,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
 
-                    // Type de cellule
-                    Color tileColor = Colors.transparent;
-                    Widget tileContent = SizedBox();
+class LevelSelectionList extends StatelessWidget {
+  final PlayerStats playerStats;
+  const LevelSelectionList({
+    super.key,
+    required this.playerStats,
+  });
+  @override
+  Widget build(BuildContext context) {
+    final totalLevels = paterns.length;
 
-                    for (var pos in turquoiseTiles) {
-                      if (pos[0] == col && pos[1] == row) {
-                        tileColor = Colors.teal;
-                      }
-                    }
+    return ListView.builder(
+      scrollDirection: Axis.horizontal,
+      padding: EdgeInsets.symmetric(horizontal: 12),
+      itemCount: totalLevels,
+      itemBuilder: (context, index) {
+        final levelNumber = index + 1;
+        final isCompleted = playerStats.completedLevels.contains(levelNumber);
 
-                    for (var pos in orangeTiles) {
-                      if (pos[0] == col && pos[1] == row) {
-                        tileColor = Colors.orange;
-                      }
-                    }
+        return Padding(
+          padding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+          child: LevelCard(
+            levelNumber: levelNumber,
+            isCompleted: isCompleted,
+          ),
+        );
+      },
+    );
+  }
+}
 
-                    if (col == diamant[0] && row == diamant[1]) {
-                      // Depart
-                      tileColor = Colors.teal;
-                      // Calculer l'angle en fonction de la direction
-                      double angle = _currentDirection * (pi / 2);
-                      tileContent = Transform.rotate(
-                        angle: angle,
-                        child: Icon(
-                          Icons.navigation,
-                          color: Colors.white,
-                          size: 12,
+class LevelCard extends StatelessWidget {
+  final int levelNumber;
+  final bool isCompleted;
+
+  const LevelCard({
+    Key? key,
+    required this.levelNumber,
+    required this.isCompleted,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.pop(context);
+        startLevel(context, levelNumber);
+      },
+      child: Container(
+        width: 100,
+        decoration: BoxDecoration(
+          color: isCompleted ? Color(0xFF00CBA9) : Color(0xFF4A4A5A),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '$levelNumber',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 8),
+            if (isCompleted)
+              Icon(
+                Icons.star,
+                color: Colors.amber,
+                size: 24,
+              ),
+            if (!isCompleted)
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.white60, width: 2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            SizedBox(height: 8),
+            Text(
+              isCompleted ? 'Terminé' : 'Jouer',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void startLevel(BuildContext context, int levelNumber) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => GameScreen(patern: paterns[levelNumber - 1]),
+      ),
+    );
+  }
+}
+
+class StatsPanel extends StatelessWidget {
+  final PlayerStats playerStats;
+  final bool isSmallScreen;
+  final bool isLargeScreen;
+
+  StatsPanel({
+    super.key,
+    required this.isSmallScreen,
+    required this.isLargeScreen,
+    required this.playerStats,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final double fontSize = isSmallScreen ? 12 : (isLargeScreen ? 18 : 14);
+    final double titleSize = isSmallScreen ? 14 : (isLargeScreen ? 20 : 16);
+    final double padding = isSmallScreen ? 15 : (isLargeScreen ? 30 : 20);
+    final double spacing = isSmallScreen ? 15 : (isLargeScreen ? 25 : 20);
+
+    return Container(
+      padding: EdgeInsets.all(padding),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E32).withOpacity(0.8),
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.5),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Statistiques de jeu',
+                style: TextStyle(
+                  fontSize: titleSize,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              IconButton(
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: Text('Réinitialiser les données'),
+                          content: Text(
+                              'Êtes-vous sûr de vouloir supprimer toutes vos données et recommencer à zéro ? Cette action est irréversible.'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(false),
+                              child: Text('Annuler'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(true),
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.red,
+                              ),
+                              child: Text('Réinitialiser'),
+                            ),
+                          ],
                         ),
+                      ) ??
+                      false;
+
+                  if (confirmed) {
+                    final success = await PlayerStatsManager.resetAllStats();
+
+                    if (success) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content:
+                                Text('Données réinitialisées avec succès')),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content: Text(
+                                'Erreur lors de la réinitialisation des données')),
                       );
                     }
-
-                    if (col == star[0] && row == star[1]) {
-                      // Cible
-                      tileColor = Colors.teal;
-                      tileContent =
-                          Icon(Icons.star, color: Colors.black, size: 12);
-                    }
-
-                    return Container(
-                      decoration: BoxDecoration(
-                        color: tileColor,
-                        border:
-                            Border.all(color: Colors.grey.shade800, width: 0.5),
-                      ),
-                      child: Center(child: tileContent),
-                    );
-                  },
-                ),
+                  }
+                },
+                icon: Icon(Icons.refresh_rounded),
               ),
-            ),
-          ),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: allActions.isEmpty
-                ? [SizedBox(height: 30)]
-                : allActions
-                    .map((action) => ControlButton(
-                          getIconData(action[0]),
-                          Colors.white,
-                          width: 20,
-                          decoColor: action[1],
-                        ))
-                    .toList(),
-          ),
-
-          // Buttons de controle
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              for (var button in patern['buttons'])
-                InkWell(
-                  onTap: () => setState(() {
-                    if (actions.length < patern['steps']) actions.add(button);
-                  }),
-                  child: Container(
-                    margin: EdgeInsets.symmetric(vertical: 10, horizontal: 2),
-                    padding: EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade900,
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                    child: Icon(
-                      getIconData(button),
-                      color: Colors.white,
-                      size: 30,
-                    ),
-                  ),
-                ),
             ],
           ),
+          SizedBox(height: spacing),
 
-          // Indicateur
-          Container(
-            height: 60,
-            color: Colors.grey.shade900,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                CommandButton(Icons.circle_outlined, Colors.grey.shade800),
-                for (var action in actions)
-                  CommandButton(getIconData(action), Colors.grey.shade800)
-              ],
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Niveaux complétés:',
+                style: TextStyle(
+                  fontSize: fontSize,
+                  color: Colors.grey,
+                ),
+              ),
+              Text(
+                '${playerStats.completedLevelsCount}/${paterns.length}',
+                style: TextStyle(
+                  fontSize: fontSize,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF00CCAA),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          LinearPercentIndicator(
+            animation: true,
+            lineHeight: 7.0,
+            animationDuration: 1000,
+            percent: playerStats.completedLevelsCount / paterns.length,
+            barRadius: const Radius.circular(5),
+            progressColor: Colors.teal,
+            backgroundColor: Colors.grey[800],
+            padding: EdgeInsets.zero,
+          ),
+          SizedBox(height: spacing),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Temps de jeu total:',
+                style: TextStyle(
+                  fontSize: fontSize,
+                  color: Colors.grey,
+                ),
+              ),
+              Text(
+                playerStats.formattedTotalPlayTime,
+                style: TextStyle(
+                  fontSize: fontSize,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF00CCAA),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: spacing),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Flexible(
+                child: Text(
+                  'Meilleur temps (niveau ${playerStats.bestTimeLevel}):',
+                  style: TextStyle(
+                    fontSize: fontSize,
+                    color: Colors.grey,
+                  ),
+                ),
+              ),
+              Text(
+                playerStats.formattedbestTime,
+                style: TextStyle(
+                  fontSize: fontSize,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF00CCAA),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
-
-  // bool play() {
-
-  // }
 }
 
-class ControlButton extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final Color? decoColor;
-  final double? width;
-  final VoidCallback? onPressed;
-
-  ControlButton(this.icon, this.color,
-      {this.onPressed, this.width, this.decoColor});
-
+class GridPainter extends CustomPainter {
   @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onPressed,
-      child: Container(
-        width: width ?? 40,
-        height: width ?? 40,
-        margin: EdgeInsets.all(5),
-        decoration: BoxDecoration(
-          color: decoColor ?? const Color(0xFF212121),
-        ),
-        child: Icon(
-          icon,
-          color: color,
-          size: width != null ? 16 * width! / 40 : 14,
-        ),
-      ),
-    );
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.05)
+      ..strokeWidth = 1;
+
+    final double gridSize = size.width / 20;
+
+    // Lignes verticales
+    for (double i = 0; i <= size.width; i += gridSize) {
+      canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
+    }
+
+    // Lignes horizontales
+    for (double i = 0; i <= size.height; i += gridSize) {
+      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
+    }
   }
-}
-
-class ColorButton extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final Color textColor;
-
-  ColorButton(this.icon, this.color, {this.textColor = Colors.white});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: color,
-      ),
-      child: Icon(icon, color: textColor),
-    );
-  }
-}
-
-class ColorBox extends StatelessWidget {
-  final Color color;
-
-  ColorBox(this.color);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 40,
-      height: 40,
-      color: color,
-    );
-  }
-}
-
-class CommandButton extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-
-  CommandButton(this.icon, this.color);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 45,
-      height: 45,
-      margin: EdgeInsets.symmetric(horizontal: 2),
-      decoration: BoxDecoration(
-        color: color,
-        border: Border.all(color: Colors.black, width: 1),
-      ),
-      child: Icon(icon, color: Colors.white),
-    );
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return false;
   }
 }
