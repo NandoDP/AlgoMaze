@@ -4,6 +4,7 @@ import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
 import 'package:puzzle/actions.dart';
+import 'package:puzzle/home.dart';
 import 'package:puzzle/paterns.dart';
 import 'package:puzzle/player-model.dart';
 
@@ -26,11 +27,12 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   // Taille de la grille
   final int gridSize = 16;
-  List<dynamic> actions = [];
+  List<List<dynamic>> actions = [];
 
   // Chemin
   late List<List<int>> turquoiseTiles;
   late List<List<int>> orangeTiles;
+  late List<List<int>> violetTiles;
 
   // Position de depart et position de la cible
   late List<int> diamant;
@@ -38,6 +40,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   // Ensemble pour suivre les étoiles collectées
   Set<List<int>> collectedStars = {};
+  Set<List<int>> collectedStars2 = {};
+  Set<List<int>> collectedVioletCase = {};
+  Set<List<int>> collectedVioletCase2 = {};
   // int targetsReached = 0;
   late int level;
 
@@ -60,6 +65,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   String _timeDisplay = "1:00:00";
   bool _gameOver = false;
 
+  Color? _selectedColor;
+  bool firstPassage = false;
+  bool firstPassage2 = false;
+
   // Conffiti celebration
   late ConfettiController _controllerCenterRight;
   late ConfettiController _controllerCenterLeft;
@@ -77,6 +86,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     _timeRemaining = widget.patern.timeRemaining;
     turquoiseTiles = patern.tile;
     orangeTiles = patern.orangeTile ?? [];
+    violetTiles = patern.violetTile ?? [];
     diamant = patern.diamant;
     stars = patern.star;
     _currentDirection = patern.direction;
@@ -167,8 +177,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   void _showWinDialog() async {
     // Mettre à jour les stats
-    _playerStats!.levelCompleted(level,
-        Duration(seconds: patern.timeRemaining - _timeRemaining));
+    _playerStats!.levelCompleted(
+        level, Duration(seconds: patern.timeRemaining - _timeRemaining));
 
     // Sauvegarder les stats mises à jour
     await PlayerStatsManager.saveStats(_playerStats!);
@@ -207,7 +217,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   ),
                 ),
                 SizedBox(height: 15),
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -229,7 +238,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   ],
                 ),
                 const SizedBox(height: 8),
-
                 SizedBox(
                   width: MediaQuery.of(context).size.width,
                   height: 10,
@@ -237,7 +245,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                     animation: true,
                     lineHeight: 7.0,
                     animationDuration: 1000,
-                    percent: _playerStats!.completedLevelsCount/paterns.length,
+                    percent:
+                        _playerStats!.completedLevelsCount / paterns.length,
                     barRadius: const Radius.circular(5),
                     progressColor: Colors.teal,
                     backgroundColor: Colors.grey[800],
@@ -245,7 +254,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   ),
                 ),
                 SizedBox(height: 15),
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -269,7 +277,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   ],
                 ),
                 SizedBox(height: 15),
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -293,7 +300,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   ],
                 ),
                 SizedBox(height: 15),
-
                 TextButton(
                   onPressed: level == paterns.length
                       ? null
@@ -325,7 +331,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                     ),
                   ),
                 ),
-
                 SizedBox(height: 15),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -333,7 +338,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                     TextButton(
                       onPressed: () {
                         Navigator.of(context).pop();
-                        Navigator.of(context).pop();
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => HomeScreen(
+                              playerStats: _playerStats!,
+                            ),
+                          ),
+                        );
                       },
                       style: ElevatedButton.styleFrom(
                         fixedSize: Size(120, 40),
@@ -351,6 +363,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                         setState(() {
                           patern = widget.patern;
                           collectedStars.clear();
+                          collectedStars2.clear();
+                          collectedVioletCase.clear();
+                          collectedVioletCase2.clear();
                           _timeRemaining = patern.timeRemaining;
                           _updateTimeDisplay();
                           _gameOver = false;
@@ -385,12 +400,42 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     actions.forEach((action) {
       final lastStep = diamondPath.last;
       final lastPosition = lastStep.position;
-      var currentDirection = lastStep.direction;
-
       if (!containsPosition(lastPosition)) return;
 
+      var currentDirection = lastStep.direction;
+      Color lastPositionColor = containsPosition(lastPosition, orangeTiles)
+          ? Colors.amber
+          : (containsPosition(lastPosition, violetTiles) &&
+                  !containsPosition(lastPosition, collectedVioletCase.toList()))
+              ? Color(0xFF790382)
+              : Colors.teal;
+
+      bool move = (action[1] == Colors.grey || action[1] == lastPositionColor);
+      // if (!move) {
+      //   print('lastPositionColor');
+      //   print(lastPositionColor);
+      //   print('action[1]');
+      //   print(action[1]);
+      // }
+
+      if (containsPosition(lastPosition, violetTiles) &&
+          !containsPosition(lastPosition, collectedVioletCase.toList())) {
+        if (samePosition(lastPosition, patern.diamant)) {
+          // On collecte uniquement si le diamant a déjà quitté sa position initiale
+          // et qu'il y revient
+          if (firstPassage2) {
+            collectedVioletCase.add(lastPosition);
+            firstPassage2 = true;
+          }
+        } else {
+          // Pour les autres cases violettes, on les collecte normalement
+          firstPassage2 = true;
+          collectedVioletCase.add(lastPosition);
+        }
+      }
+
       if (collectedStars.length != stars.length) {
-        if (action == Move.moveFoward) {
+        if (action[0] == Move.moveFoward && move) {
           List<int> newPosition;
           switch (currentDirection) {
             case 0: // Up
@@ -419,19 +464,20 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             }
           });
           if (!containsPosition(newPosition)) return;
-        } else if (action == Move.rotatLeft) {
+        } else if (action[0] == Move.rotatLeft && move) {
           final newDirection = (currentDirection + 3) % 4;
           setState(() {
             diamondPath.add(PathStep(List.from(lastPosition), newDirection,
                 isRotation: true));
           });
-        } else if (action == Move.rotatRight) {
+        } else if (action[0] == Move.rotatRight && move) {
           final newDirection = (currentDirection + 1) % 4;
           setState(() {
             diamondPath.add(PathStep(List.from(lastPosition), newDirection,
                 isRotation: true));
           });
-        } else if (action == Move.repet) {
+        } else if (action[0] == Move.repet) {
+          if (diamondPath.length > 100) return;
           addPointToPath();
           return;
         }
@@ -440,17 +486,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   void _setupAnimations() {
-    // Initialiser les controllers
-    _positionController = AnimationController(
-      duration: const Duration(milliseconds: 3000),
-      vsync: this,
-    );
-
-    _rotationController = AnimationController(
-      duration: const Duration(milliseconds: 3000),
-      vsync: this,
-    );
-
     // Convertir les étapes de mouvement en points
     _points = diamondPath
         .map((step) =>
@@ -459,6 +494,21 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
     // Créer une liste d'angles
     _angles = diamondPath.map((step) => step.direction * (pi / 2)).toList();
+
+    // Initialiser les controllers
+    int totalSteps = _points.length;
+    Duration totalDuration = Duration(milliseconds: totalSteps * 400);
+
+    // Initialiser les controllers avec la durée calculée
+    _positionController = AnimationController(
+      duration: totalDuration,
+      vsync: this,
+    );
+
+    _rotationController = AnimationController(
+      duration: totalDuration, // Même durée que le contrôleur de position
+      vsync: this,
+    );
 
     // Configurer les animations de position
     List<Animation<Offset>> positionAnimations = [];
@@ -491,6 +541,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           _currentStepIndex = 0;
           diamant = List.from(diamondPath[0].position);
           _currentDirection = diamondPath[0].direction;
+          firstPassage = false;
+          firstPassage2 = false;
         });
         _positionController.reset();
         _rotationController.reset();
@@ -704,7 +756,14 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         children: [
           IconButton(
             onPressed: () {
-              Navigator.of(context).pop();
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => HomeScreen(
+                    playerStats: _playerStats!,
+                  ),
+                ),
+              );
             },
             icon: Icon(Icons.arrow_back_rounded, color: Colors.white),
           ),
@@ -769,6 +828,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           if (!_isAnimating) {
             setState(() {
               diamondPath = [PathStep(diamant, _currentDirection)];
+              collectedStars.clear();
+              collectedStars2.clear();
+              collectedVioletCase.clear();
+              collectedVioletCase2.clear();
             });
             addPointToPath();
             if (actions.isNotEmpty) {
@@ -792,7 +855,12 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           if (!_isAnimating) {
             setState(() {
               diamondPath = [PathStep(diamant, _currentDirection)];
+              _selectedColor = null;
               actions = [];
+              collectedStars.clear();
+              collectedStars2.clear();
+              collectedVioletCase.clear();
+              collectedVioletCase2.clear();
             });
           }
         },
@@ -805,6 +873,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         onPressed: () {
           if (actions.isNotEmpty) {
             setState(() {
+              _selectedColor = null;
               actions.removeLast();
             });
           }
@@ -851,9 +920,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   }
                 }
 
+                // Placer les etoiles
                 for (var star in stars) {
-                  if (samePosition(star, [col, row])) {
-                    tileColor = Colors.teal;
+                  if (samePosition(star, [col, row]) &&
+                      !collectedStars2.contains(star)) {
+                    // tileColor = Colors.teal;
                     tileContent = Icon(
                       Icons.star,
                       color: Colors.black,
@@ -862,8 +933,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   }
                 }
 
-                if (col == diamant[0] && row == diamant[1]) {
-                  // Depart
+                // Diamant
+                if (samePosition(diamant, [col, row])) {
+                  // Vert s'il collecte une etoile, turquoise s'il est bien positionné et rouge sinon
                   if (containsPosition([col, row], stars)) {
                     tileColor = Colors.green;
                   } else if (!containsPosition([col, row])) {
@@ -883,9 +955,51 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   );
                 }
 
+                // Case orange
                 for (var pos in orangeTiles) {
-                  if (pos[0] == col && pos[1] == row) {
+                  if (samePosition(pos, [col, row])) {
                     tileColor = Colors.orange;
+                  }
+                }
+
+                // Case violette
+                for (var pos in violetTiles) {
+                  // Verifier qu'elle n'est pas collecté
+                  if (samePosition(pos, [col, row]) &&
+                      !collectedVioletCase2.contains(pos)) {
+                    tileColor = Color.fromARGB(255, 121, 3, 130);
+                  }
+                }
+
+                // Si le diamant est
+                if (samePosition([col, row], diamant)) {
+                  // Sur une étoile
+                  for (var star in stars) {
+                    if (samePosition(diamant, star) &&
+                        !collectedStars2.contains(star)) {
+                      // on collecte l'étoile
+                      collectedStars2.add(star);
+                    }
+                  }
+
+                  // Sur une case viollete
+                  for (var vtile in violetTiles) {
+                    if (samePosition(diamant, vtile) &&
+                        !collectedVioletCase2.contains(vtile)) {
+                      // Si c'est la case de départ (première dans violetTiles)
+                      if (samePosition(vtile, patern.diamant)) {
+                        // On collecte uniquement si le diamant a déjà quitté sa position initiale
+                        // et qu'il y revient
+                        if (firstPassage) {
+                          firstPassage = true;
+                          collectedVioletCase2.add(vtile);
+                        }
+                      } else {
+                        // Pour les autres cases violettes, on les collecte normalement
+                        firstPassage = true;
+                        collectedVioletCase2.add(vtile);
+                      }
+                    }
                   }
                 }
 
@@ -1021,25 +1135,52 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               for (var button in patern.buttons)
-                InkWell(
-                  onTap: () => setState(() {
-                    if (actions.length < patern.steps) actions.add(button);
-                  }),
-                  child: Container(
-                    width: buttonSize,
-                    height: buttonSize,
-                    margin: EdgeInsets.symmetric(vertical: 10, horizontal: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade900,
-                      borderRadius: BorderRadius.circular(5),
+                Builder(builder: (context) {
+                  bool colorSelected =
+                      button is Color && button == _selectedColor;
+                  return InkWell(
+                    onTap: () => setState(() {
+                      if (actions.length < patern.steps) {
+                        if (button is Color) {
+                          _selectedColor = button;
+                          colorSelected = true;
+                        } else {
+                          if (button == Move.repet) {
+                            actions.add([button, Colors.grey]);
+                            _selectedColor = null;
+                            return;
+                          }
+
+                          if (_selectedColor != null) {
+                            actions.add([button, _selectedColor]);
+                            _selectedColor = null;
+                          } else {
+                            actions.add([button, Colors.grey]);
+                          }
+                        }
+                      }
+                    }),
+                    child: Container(
+                      width: buttonSize,
+                      height: buttonSize,
+                      margin: EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+                      decoration: BoxDecoration(
+                        color: button is Color ? button : Colors.grey.shade900,
+                        borderRadius: BorderRadius.circular(5),
+                        border: colorSelected
+                            ? Border.all(color: Colors.white)
+                            : null,
+                      ),
+                      child: button is Color
+                          ? null
+                          : Icon(
+                              getIconData(button),
+                              color: Colors.white,
+                              size: iconSize,
+                            ),
                     ),
-                    child: Icon(
-                      getIconData(button),
-                      color: Colors.white,
-                      size: iconSize,
-                    ),
-                  ),
-                ),
+                  );
+                }),
             ],
           ),
         ),
@@ -1081,11 +1222,13 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   height: buttonSize,
                   margin: EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade800,
+                    color: action[1] != Colors.grey
+                        ? action[1]
+                        : Colors.grey.shade800,
                     border: Border.all(color: Colors.black, width: 1),
                   ),
                   child: Icon(
-                    getIconData(action),
+                    getIconData(action[0]),
                     color: Colors.white,
                     size: iconSize,
                   ),

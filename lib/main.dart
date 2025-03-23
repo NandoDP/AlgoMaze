@@ -3,6 +3,8 @@ import 'package:puzzle/home.dart';
 import 'package:puzzle/player-model.dart';
 
 Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
   final playerStats = await PlayerStatsManager.loadStats();
 
   runApp(MyApp(playerStats: playerStats));

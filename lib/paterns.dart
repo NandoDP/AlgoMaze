@@ -1,11 +1,13 @@
+import 'package:flutter/material.dart';
 import 'package:puzzle/actions.dart';
 
 class Patern {
   final int niveau;
   final List<List<int>> tile;
   List<List<int>>? orangeTile;
+  List<List<int>>? violetTile;
   final int direction;
-  final List<Move> buttons;
+  final List<dynamic> buttons;
   final int steps;
   final List<int> diamant;
   final List<List<int>> star;
@@ -14,6 +16,7 @@ class Patern {
     required this.niveau,
     required this.tile,
     this.orangeTile,
+    this.violetTile,
     required this.direction,
     required this.buttons,
     required this.steps,
@@ -26,8 +29,9 @@ class Patern {
     int? niveau,
     List<List<int>>? tile,
     List<List<int>>? orangeTile,
+    List<List<int>>? violetTile,
     int? direction,
-    List<Move>? buttons,
+    List<dynamic>? buttons,
     int? steps,
     List<int>? diamant,
     List<List<int>>? star,
@@ -37,6 +41,7 @@ class Patern {
       niveau: niveau ?? this.niveau,
       tile: tile ?? this.tile,
       orangeTile: orangeTile ?? this.orangeTile,
+      violetTile: violetTile ?? this.violetTile,
       direction: direction ?? this.direction,
       buttons: buttons ?? this.buttons,
       steps: steps ?? this.steps,
@@ -48,7 +53,7 @@ class Patern {
 
   @override
   String toString() {
-    return 'Patern(niveau: $niveau, tile: $tile, orangeTile: $orangeTile, direction: $direction, buttons: $buttons, steps: $steps, diamant: $diamant, star: $star, timeRemaining: $timeRemaining)';
+    return 'Patern(niveau: $niveau, tile: $tile, orangeTile: $orangeTile, violetTile: $violetTile, direction: $direction, buttons: $buttons, steps: $steps, diamant: $diamant, star: $star, timeRemaining: $timeRemaining)';
   }
 }
 
@@ -57,6 +62,8 @@ List<Patern> paterns = [
   patern2,
   patern3,
   patern4,
+  patern5,
+  patern6,
 ];
 
 Patern patern1 = Patern(
@@ -73,7 +80,9 @@ Patern patern1 = Patern(
   buttons: [Move.moveFoward, Move.repet],
   steps: 2,
   diamant: [5, 7],
-  star: [[10, 7]],
+  star: [
+    [10, 7]
+  ],
   timeRemaining: 600,
 );
 
@@ -103,7 +112,9 @@ Patern patern2 = Patern(
   buttons: [Move.moveFoward, Move.rotatLeft, Move.rotatRight, Move.repet],
   steps: 5,
   diamant: [11, 3],
-  star: [[4, 10]],
+  star: [
+    [4, 10]
+  ],
   timeRemaining: 900,
 );
 
@@ -125,13 +136,14 @@ Patern patern3 = Patern(
   direction: 2,
   buttons: [Move.moveFoward, Move.rotatLeft, Move.rotatRight, Move.repet],
   steps: 5,
-  // orangeTiles: [
-  //   [4, 7],
-  //   [4, 8]
-  // ],
+  orangeTile: [
+    [4, 7],
+    [4, 8]
+  ],
   diamant: [8, 11],
-  // diamant: [9, 12],
-  star: [[10, 14]],
+  star: [
+    [10, 14]
+  ],
   timeRemaining: 1200,
 );
 
@@ -143,22 +155,124 @@ Patern patern4 = Patern(
     [4, 8],
     [5, 8],
     [6, 8],
-    [7, 8], [7, 9], [7, 10], [7, 11], [7, 12], [7, 13],
+    [7, 8],
+    [7, 9],
+    [7, 10],
+    [7, 11],
+    [7, 12],
+    [7, 13],
     [8, 8],
     [9, 8],
     [10, 8],
     [11, 8],
     [12, 8],
   ],
-  direction: 4,
-  buttons: [Move.moveFoward, Move.rotatLeft, Move.rotatRight, Move.repet],
+  direction: 0,
+  buttons: [
+    Move.moveFoward,
+    Move.rotatLeft,
+    Move.rotatRight,
+    Color(0xFF790382),
+    // Colors.teal,
+    Colors.amber,
+    Move.repet
+  ],
   steps: 6,
   orangeTile: [
     [2, 8],
     [12, 8],
     [7, 13],
   ],
+  violetTile: [
+    [7, 8]
+  ],
   diamant: [7, 13],
-  star: [[2, 8], [12, 8]],
+  star: [
+    [2, 8],
+    [12, 8]
+  ],
+  timeRemaining: 1200,
+);
+
+Patern patern5 = Patern(
+  niveau: 5,
+  tile: [
+    [6, 6],
+    [7, 6],
+    [8, 6],
+    [9, 6], [10, 6],
+    [9, 7],
+    [9, 8],
+    [9, 9],
+    [8, 9],
+    [7, 9],
+    [6, 9],
+    [6, 8],
+    [6, 7],
+  ],
+  direction: 1,
+  buttons: [
+    Move.moveFoward,
+    Move.rotatLeft,
+    Move.rotatRight,
+    Color(0xFF790382),
+    Colors.amber,
+    Move.repet
+  ],
+  steps: 4,
+  violetTile: [
+    [6, 6], [9, 6],
+    [9, 9], [6, 9],
+  ],
+  diamant: [6, 6],
+  star: [
+    [9, 6], [10, 6],
+    [9, 9], [6, 9],
+  ],
+  timeRemaining: 1200,
+);
+
+Patern patern6 = Patern(
+  niveau: 6,
+  tile: [
+    [5, 5], [5, 6], [5, 7], [5, 8], [5, 9],
+    [6, 5], [6, 6], [6, 7], [6, 8], [6, 9],
+    [7, 5], [7, 6], [7, 7], [7, 8], [7, 9],
+    [8, 5], [8, 6], [8, 7], [8, 8], [8, 9],
+    [9, 5], [9, 6], [9, 7], [9, 8], [9, 9],
+  ],
+  direction: 1,
+  buttons: [
+    Move.moveFoward,
+    Move.rotatLeft,
+    Move.rotatRight,
+    Color(0xFF790382),
+    Colors.teal,
+    Colors.amber,
+    Move.repet
+  ],
+  steps: 4,
+  orangeTile: [
+    [5, 5], [5, 6], [5, 7], [5, 8], [5, 9],
+    [6, 5], [6, 7], [6, 9],
+    [7, 5], [7, 6], [7, 8], [7, 9],
+    [8, 5], [8, 7], [8, 9],
+    [9, 5], [9, 6], [9, 7], [9, 8], [9, 9],
+  ],
+  // violetTile: [
+  //   [5, 5], [5, 6], [5, 7], [5, 8], [5, 9],
+  //   [6, 5], [6, 6], [6, 7], [6, 8], [6, 9],
+  //   [7, 5], [7, 6], [7, 7], [7, 8], [7, 9],
+  //   [8, 5], [8, 6], [8, 7], [8, 8], [8, 9],
+  //   [9, 5], [9, 6], [9, 7], [9, 8], [9, 9],
+  // ],
+  diamant: [7, 7],
+  star: [
+    [5, 5], [5, 6], [5, 7], [5, 8], [5, 9],
+    [6, 5], [6, 7], [6, 9],
+    [7, 5], [7, 6], [7, 8], [7, 9],
+    [8, 5], [8, 7], [8, 9],
+    [9, 5], [9, 6], [9, 7], [9, 8], [9, 6],
+  ],
   timeRemaining: 1200,
 );

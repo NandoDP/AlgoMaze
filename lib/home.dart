@@ -1,8 +1,7 @@
-// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
 
-import 'package:puzzle/game_page.dart';
+import 'package:puzzle/game-page.dart';
 import 'package:puzzle/paterns.dart';
 import 'package:puzzle/player-model.dart';
 
@@ -18,16 +17,22 @@ class _HomeScreenState extends State<HomeScreen> {
   PlayerStats? _playerStats;
   bool firstTime = true;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadPlayerStats();
-  }
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   _loadPlayerStats();
+  // }
 
   Future<void> _loadPlayerStats() async {
     _playerStats = await PlayerStatsManager.loadStats();
     firstTime = PlayerStatsManager.firstTime;
     setState(() {});
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadPlayerStats();
   }
 
   @override
@@ -364,7 +369,7 @@ class LevelCard extends StatelessWidget {
   }
 }
 
-class StatsPanel extends StatelessWidget {
+class StatsPanel extends StatefulWidget {
   final PlayerStats playerStats;
   final bool isSmallScreen;
   final bool isLargeScreen;
@@ -377,11 +382,17 @@ class StatsPanel extends StatelessWidget {
   });
 
   @override
+  State<StatsPanel> createState() => _StatsPanelState();
+}
+
+class _StatsPanelState extends State<StatsPanel> {
+
+  @override
   Widget build(BuildContext context) {
-    final double fontSize = isSmallScreen ? 12 : (isLargeScreen ? 18 : 14);
-    final double titleSize = isSmallScreen ? 14 : (isLargeScreen ? 20 : 16);
-    final double padding = isSmallScreen ? 15 : (isLargeScreen ? 30 : 20);
-    final double spacing = isSmallScreen ? 15 : (isLargeScreen ? 25 : 20);
+    final double fontSize = widget.isSmallScreen ? 12 : (widget.isLargeScreen ? 18 : 14);
+    final double titleSize = widget.isSmallScreen ? 14 : (widget.isLargeScreen ? 20 : 16);
+    final double padding = widget.isSmallScreen ? 15 : (widget.isLargeScreen ? 30 : 20);
+    final double spacing = widget.isSmallScreen ? 15 : (widget.isLargeScreen ? 25 : 20);
 
     return Container(
       padding: EdgeInsets.all(padding),
@@ -437,6 +448,7 @@ class StatsPanel extends StatelessWidget {
 
                   if (confirmed) {
                     final success = await PlayerStatsManager.resetAllStats();
+                    setState(() {});
 
                     if (success) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -470,7 +482,7 @@ class StatsPanel extends StatelessWidget {
                 ),
               ),
               Text(
-                '${playerStats.completedLevelsCount}/${paterns.length}',
+                '${widget.playerStats.completedLevelsCount}/${paterns.length}',
                 style: TextStyle(
                   fontSize: fontSize,
                   fontWeight: FontWeight.bold,
@@ -485,7 +497,7 @@ class StatsPanel extends StatelessWidget {
             animation: true,
             lineHeight: 7.0,
             animationDuration: 1000,
-            percent: playerStats.completedLevelsCount / paterns.length,
+            percent: widget.playerStats.completedLevelsCount / paterns.length,
             barRadius: const Radius.circular(5),
             progressColor: Colors.teal,
             backgroundColor: Colors.grey[800],
@@ -504,7 +516,7 @@ class StatsPanel extends StatelessWidget {
                 ),
               ),
               Text(
-                playerStats.formattedTotalPlayTime,
+                widget.playerStats.formattedTotalPlayTime,
                 style: TextStyle(
                   fontSize: fontSize,
                   fontWeight: FontWeight.bold,
@@ -520,7 +532,7 @@ class StatsPanel extends StatelessWidget {
             children: [
               Flexible(
                 child: Text(
-                  'Meilleur temps (niveau ${playerStats.bestTimeLevel}):',
+                  'Meilleur temps (niveau ${widget.playerStats.bestTimeLevel}):',
                   style: TextStyle(
                     fontSize: fontSize,
                     color: Colors.grey,
@@ -528,7 +540,7 @@ class StatsPanel extends StatelessWidget {
                 ),
               ),
               Text(
-                playerStats.formattedbestTime,
+                widget.playerStats.formattedbestTime,
                 style: TextStyle(
                   fontSize: fontSize,
                   fontWeight: FontWeight.bold,

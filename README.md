@@ -2,7 +2,7 @@
 
 ## Mon défi personnel
 
-Ce projet représente mon défi personnel de recréation d'un jeu de programmation visuelle découvert sur la plateforme Zone01Dakar. Après avoir exploré leur site, j'ai été inspiré par ce jeu et j'ai décidé de le recoder entièrement en Flutter comme exercice pratique.
+Ce projet représente mon défi personnel de recréation d'un jeu de programmation visuelle découvert sur la plateforme Zone01Dakar. Après avoir exploré leur site, j'avais été inspiré par ce jeu et j'avait décidé de le recoder entièrement en Flutter comme exercice pratique. Samedi dernier je me suis lancé et voici le resultat une semaine plus tard
 
 ### À propos du jeu
 
