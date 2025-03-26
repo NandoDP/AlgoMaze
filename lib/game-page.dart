@@ -27,7 +27,8 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   // Taille de la grille
   final int gridSize = 16;
-  List<List<dynamic>> actions = [];
+  List<List<dynamic>> actions1 = [];
+  List<List<dynamic>> actions2 = [];
 
   // Chemin
   late List<List<int>> turquoiseTiles;
@@ -43,7 +44,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   Set<List<int>> collectedStars2 = {};
   Set<List<int>> collectedVioletCase = {};
   Set<List<int>> collectedVioletCase2 = {};
-  // int targetsReached = 0;
   late int level;
 
   late List<PathStep> diamondPath;
@@ -372,7 +372,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                           diamant = patern.diamant;
                           _currentDirection = patern.direction;
                           diamondPath = [PathStep(diamant, _currentDirection)];
-                          actions = [];
+                          actions1 = [];
+                          actions2 = [];
                         });
                         startTimer();
                       },
@@ -396,27 +397,21 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     );
   }
 
-  void addPointToPath() {
-    actions.forEach((action) {
+  void addPointToPath(bool first) {
+    (first ? actions1 : actions2).forEach((action) {
       final lastStep = diamondPath.last;
       final lastPosition = lastStep.position;
       if (!containsPosition(lastPosition)) return;
 
       var currentDirection = lastStep.direction;
       Color lastPositionColor = containsPosition(lastPosition, orangeTiles)
-          ? Colors.amber
+          ? Colors.orange
           : (containsPosition(lastPosition, violetTiles) &&
                   !containsPosition(lastPosition, collectedVioletCase.toList()))
               ? Color(0xFF790382)
               : Colors.teal;
 
       bool move = (action[1] == Colors.grey || action[1] == lastPositionColor);
-      // if (!move) {
-      //   print('lastPositionColor');
-      //   print(lastPositionColor);
-      //   print('action[1]');
-      //   print(action[1]);
-      // }
 
       if (containsPosition(lastPosition, violetTiles) &&
           !containsPosition(lastPosition, collectedVioletCase.toList())) {
@@ -476,9 +471,13 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             diamondPath.add(PathStep(List.from(lastPosition), newDirection,
                 isRotation: true));
           });
-        } else if (action[0] == Move.repet) {
+        } else if (action[0] == Move.repetStage0 && move) {
           if (diamondPath.length > 100) return;
-          addPointToPath();
+          addPointToPath(true);
+          return;
+        } else if (action[0] == Move.repetStage1 && move) {
+          if (diamondPath.length > 100) return;
+          addPointToPath(false);
           return;
         }
       }
@@ -562,8 +561,6 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           if (segmentIndex < positionAnimations.length) {
             final animation = positionAnimations[segmentIndex];
             diamant = [animation.value.dx.round(), animation.value.dy.round()];
-
-            // stars.removeWhere((star) => samePosition(diamant, star));
           }
         }
       });
@@ -833,8 +830,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               collectedVioletCase.clear();
               collectedVioletCase2.clear();
             });
-            addPointToPath();
-            if (actions.isNotEmpty) {
+            addPointToPath(true);
+            if (actions1.isNotEmpty) {
               _startAnimation();
             }
           }
@@ -856,7 +853,8 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             setState(() {
               diamondPath = [PathStep(diamant, _currentDirection)];
               _selectedColor = null;
-              actions = [];
+              actions1 = [];
+              actions2 = [];
               collectedStars.clear();
               collectedStars2.clear();
               collectedVioletCase.clear();
@@ -871,10 +869,15 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         width: buttonSize,
         iconSize: iconSize,
         onPressed: () {
-          if (actions.isNotEmpty) {
+          if (actions2.isNotEmpty) {
             setState(() {
               _selectedColor = null;
-              actions.removeLast();
+              actions2.removeLast();
+            });
+          } else if (actions1.isNotEmpty) {
+            setState(() {
+              _selectedColor = null;
+              actions1.removeLast();
             });
           }
         },
@@ -1062,9 +1065,15 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                     Colors.white,
                     width: buttonSize,
                     iconSize: iconSize,
-                    decoColor: containsPosition(diamondPath[i].position)
-                        ? Colors.green
-                        : Colors.red,
+                    decoColor:
+                        containsPosition(diamondPath[i].position, orangeTiles)
+                            ? Colors.orange
+                            : (containsPosition(
+                                    diamondPath[i].position, violetTiles))
+                                ? Color(0xFF790382)
+                                : containsPosition(diamondPath[i].position)
+                                    ? Colors.green
+                                    : Colors.red,
                   ),
                 ),
 
@@ -1140,22 +1149,47 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                       button is Color && button == _selectedColor;
                   return InkWell(
                     onTap: () => setState(() {
-                      if (actions.length < patern.steps) {
+                      if (actions1.length < patern.steps0) {
                         if (button is Color) {
                           _selectedColor = button;
                           colorSelected = true;
                         } else {
-                          if (button == Move.repet) {
-                            actions.add([button, Colors.grey]);
+                          if (button == Move.repetStage0 ||
+                              button == Move.repetStage1) {
+                            actions1
+                                .add([button, _selectedColor ?? Colors.grey]);
                             _selectedColor = null;
                             return;
                           }
 
-                          if (_selectedColor != null) {
-                            actions.add([button, _selectedColor]);
-                            _selectedColor = null;
+                          actions1.add([button, _selectedColor ?? Colors.grey]);
+                          _selectedColor = null;
+                          // if (_selectedColor != null) {
+                          // } else {
+                          //   actions1.add([button, Colors.grey]);
+                          // }
+                        }
+                      } else if (patern.steps1 != null) {
+                        if (actions2.length < patern.steps1!) {
+                          if (button is Color) {
+                            _selectedColor = button;
+                            colorSelected = true;
                           } else {
-                            actions.add([button, Colors.grey]);
+                            if (button == Move.repetStage0 ||
+                                button == Move.repetStage1) {
+                              actions2
+                                  .add([button, _selectedColor ?? Colors.grey]);
+                              _selectedColor = null;
+                              return;
+                            }
+
+                            actions2
+                                .add([button, _selectedColor ?? Colors.grey]);
+                            _selectedColor = null;
+                            // if (_selectedColor != null) {
+                            // } else {
+                            //   actions2.add([button, Colors.grey]);
+                            // }
                           }
                         }
                       }
@@ -1193,59 +1227,116 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
     final iconSize = smallScreen ? 20.0 : 24.0;
 
     return Container(
-      height: buttonSize + 16,
+      height: (buttonSize + 16) * (patern.steps1 != null ? 2 : 1),
       color: Colors.grey.shade900,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.start,
+        child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2.0),
-              child: Container(
-                width: buttonSize,
-                height: buttonSize,
-                margin: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade800,
-                  border: Border.all(color: Colors.black, width: 1),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                  child: Container(
+                    width: buttonSize,
+                    height: buttonSize,
+                    margin: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade800,
+                      border: Border.all(color: Colors.black, width: 1),
+                    ),
+                    child: Icon(Icons.exposure_zero_rounded,
+                        color: Colors.white, size: iconSize),
+                  ),
                 ),
-                child: Icon(Icons.circle_outlined,
-                    color: Colors.white, size: iconSize),
-              ),
+                for (var action in actions1)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                    child: Container(
+                      width: buttonSize,
+                      height: buttonSize,
+                      margin: EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: action[1] != Colors.grey
+                            ? action[1]
+                            : Colors.grey.shade800,
+                        border: Border.all(color: Colors.black, width: 1),
+                      ),
+                      child: Icon(
+                        getIconData(action[0]),
+                        color: Colors.white,
+                        size: iconSize,
+                      ),
+                    ),
+                  ),
+                for (var i = 0; i < patern.steps0 - actions1.length; i++)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                    child: Container(
+                      width: buttonSize,
+                      height: buttonSize,
+                      margin: EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade800,
+                        border: Border.all(color: Colors.black, width: 1),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-            for (var action in actions)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2.0),
-                child: Container(
-                  width: buttonSize,
-                  height: buttonSize,
-                  margin: EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: action[1] != Colors.grey
-                        ? action[1]
-                        : Colors.grey.shade800,
-                    border: Border.all(color: Colors.black, width: 1),
+            if (patern.steps1 != null)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                    child: Container(
+                      width: buttonSize,
+                      height: buttonSize,
+                      margin: EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade800,
+                        border: Border.all(color: Colors.black, width: 1),
+                      ),
+                      child: Icon(Icons.one_x_mobiledata_rounded,
+                          color: Colors.white, size: iconSize),
+                    ),
                   ),
-                  child: Icon(
-                    getIconData(action[0]),
-                    color: Colors.white,
-                    size: iconSize,
-                  ),
-                ),
-              ),
-            for (var i = 0; i < patern.steps - actions.length; i++)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2.0),
-                child: Container(
-                  width: buttonSize,
-                  height: buttonSize,
-                  margin: EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade800,
-                    border: Border.all(color: Colors.black, width: 1),
-                  ),
-                ),
+                  for (var action in actions2)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                      child: Container(
+                        width: buttonSize,
+                        height: buttonSize,
+                        margin: EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: action[1] != Colors.grey
+                              ? action[1]
+                              : Colors.grey.shade800,
+                          border: Border.all(color: Colors.black, width: 1),
+                        ),
+                        child: Icon(
+                          getIconData(action[0]),
+                          color: Colors.white,
+                          size: iconSize,
+                        ),
+                      ),
+                    ),
+                  for (var i = 0; i < patern.steps1! - actions2.length; i++)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                      child: Container(
+                        width: buttonSize,
+                        height: buttonSize,
+                        margin: EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade800,
+                          border: Border.all(color: Colors.black, width: 1),
+                        ),
+                      ),
+                    ),
+                ],
               ),
           ],
         ),
