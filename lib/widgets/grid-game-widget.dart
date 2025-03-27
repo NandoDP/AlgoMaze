@@ -12,6 +12,9 @@ class Gridgamewidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final viewModel = Provider.of<GameViewModel>(context);
     return LayoutBuilder(builder: (context, constraints) {
+      // Calculater icon size
+      double iconSize = min(constraints.maxWidth / gridSize * 0.5, 24.0);
+
       return Padding(
         padding: const EdgeInsets.all(8.0),
         child: AspectRatio(
@@ -21,7 +24,7 @@ class Gridgamewidget extends StatelessWidget {
               border: Border.all(color: Colors.grey.shade800, width: 1),
             ),
             child: GridView.builder(
-              physics: NeverScrollableScrollPhysics(),
+              physics: const NeverScrollableScrollPhysics(),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: gridSize,
                 childAspectRatio: 1.0,
@@ -33,7 +36,7 @@ class Gridgamewidget extends StatelessWidget {
 
                 // Type de cellule
                 Color tileColor = Colors.transparent;
-                Widget tileContent = SizedBox();
+                Widget tileContent = const SizedBox();
 
                 for (var pos in viewModel.turquoiseTiles) {
                   if (samePosition(pos, [col, row])) {
@@ -45,11 +48,10 @@ class Gridgamewidget extends StatelessWidget {
                 for (var star in viewModel.stars) {
                   if (samePosition(star, [col, row]) &&
                       !viewModel.collectedStars2.contains(star)) {
-                    // tileColor = Colors.teal;
                     tileContent = Icon(
                       Icons.star,
                       color: Colors.black,
-                      size: constraints.maxWidth / gridSize * 0.5,
+                      size: iconSize,
                     );
                   }
                 }
@@ -71,7 +73,7 @@ class Gridgamewidget extends StatelessWidget {
                     child: Icon(
                       Icons.navigation,
                       color: Colors.white,
-                      size: constraints.maxWidth / gridSize * 0.5,
+                      size: iconSize,
                     ),
                   );
                 }
@@ -88,7 +90,7 @@ class Gridgamewidget extends StatelessWidget {
                   // Verifier qu'elle n'est pas collecté
                   if (samePosition(pos, [col, row]) &&
                       !viewModel.collectedVioletCase2.contains(pos)) {
-                    tileColor = Color.fromARGB(255, 121, 3, 130);
+                    tileColor = const Color.fromARGB(255, 121, 3, 130);
                   }
                 }
 
@@ -127,8 +129,7 @@ class Gridgamewidget extends StatelessWidget {
                 return Container(
                   decoration: BoxDecoration(
                     color: tileColor,
-                    border:
-                        Border.all(color: const Color(0xFF444444), width: 0.5),
+                    border: Border.all(color: const Color(0xFF444444), width: 0.5),
                   ),
                   child: Center(child: tileContent),
                 );

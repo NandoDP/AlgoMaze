@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PlayerStats {
@@ -73,22 +74,79 @@ class PlayerStats {
   }
 }
 
-class PlayerStatsManager {
-  static const String _storageKey = 'player_stats';
-  static PlayerStats? _cachedStats;
-  static bool firstTime = false;
+// class PlayerStatsManager {
+//   static const String _storageKey = 'player_stats';
+//   static PlayerStats? _cachedStats;
+//   static bool firstTime = false;
 
-  // Charger les stats depuis le stockage local
-  static Future<PlayerStats> loadStats() async {
-    if (_cachedStats != null) {
-      return _cachedStats!;
-    }
+//   // Charger les stats depuis le stockage local
+//   static Future<PlayerStats> loadStats() async {
+//     if (_cachedStats != null) {
+//       return _cachedStats!;
+//     }
+
+//     final prefs = await SharedPreferences.getInstance();
+//     final String? statsJson = prefs.getString(_storageKey);
+
+//     if (statsJson == null) {
+//       // Aucune donnée sauvegardée, créer un nouvel objet stats
+//       firstTime = true;
+//       _cachedStats = PlayerStats();
+//       return _cachedStats!;
+//     }
+
+//     try {
+//       final Map<String, dynamic> json = jsonDecode(statsJson);
+//       _cachedStats = PlayerStats.fromJson(json);
+//       return _cachedStats!;
+//     } catch (e) {
+//       // En cas d'erreur, retourner des stats par défaut
+//       print('Erreur lors du chargement des stats: $e');
+//       _cachedStats = PlayerStats();
+//       return _cachedStats!;
+//     }
+//   }
+
+//   // Sauvegarder les stats dans le stockage local
+//   static Future<bool> saveStats(PlayerStats stats) async {
+//     final prefs = await SharedPreferences.getInstance();
+//     final String statsJson = jsonEncode(stats.toJson());
+//     // Mettre à jour le cache
+//     _cachedStats = stats; 
+//     return await prefs.setString(_storageKey, statsJson);
+//   }
+
+//   // Réinitialiser toutes les données du joueur
+//   static Future<bool> resetAllStats() async {
+//     try {
+//       // Réinitialiser le cache en mémoire
+//       _cachedStats = PlayerStats();
+
+//       // Supprimer les données de SharedPreferences
+//       final prefs = await SharedPreferences.getInstance();
+//       await prefs.remove(_storageKey);
+
+//       // Sauvegarder de nouvelles stats vides
+//       // return await saveStats(_cachedStats!);
+//       return true;
+//     } catch (e) {
+//       print('Erreur lors de la réinitialisation des stats: $e');
+//       return false;
+//     }
+//   }
+// }
+class PlayerStatsManager extends ChangeNotifier {
+  static const String _storageKey = 'player_stats';
+  PlayerStats? _cachedStats;
+  bool firstTime = false;
+
+  Future<PlayerStats> loadStats() async {
+    if (_cachedStats != null) return _cachedStats!;
 
     final prefs = await SharedPreferences.getInstance();
     final String? statsJson = prefs.getString(_storageKey);
 
     if (statsJson == null) {
-      // Aucune donnée sauvegardée, créer un nouvel objet stats
       firstTime = true;
       _cachedStats = PlayerStats();
       return _cachedStats!;
@@ -99,40 +157,34 @@ class PlayerStatsManager {
       _cachedStats = PlayerStats.fromJson(json);
       return _cachedStats!;
     } catch (e) {
-      // En cas d'erreur, retourner des stats par défaut
       print('Erreur lors du chargement des stats: $e');
       _cachedStats = PlayerStats();
       return _cachedStats!;
     }
   }
 
-  // Sauvegarder les stats dans le stockage local
-  static Future<bool> saveStats(PlayerStats stats) async {
+  Future<bool> saveStats(PlayerStats stats) async {
     final prefs = await SharedPreferences.getInstance();
     final String statsJson = jsonEncode(stats.toJson());
-    // Mettre à jour le cache
-    _cachedStats = stats; 
+    _cachedStats = stats;
+    // notifyListeners();
     return await prefs.setString(_storageKey, statsJson);
   }
 
-  // Réinitialiser toutes les données du joueur
-  static Future<bool> resetAllStats() async {
+  Future<bool> resetAllStats() async {
     try {
-      // Réinitialiser le cache en mémoire
       _cachedStats = PlayerStats();
-
-      // Supprimer les données de SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_storageKey);
-
-      // Sauvegarder de nouvelles stats vides
-      // return await saveStats(_cachedStats!);
+      notifyListeners();
       return true;
     } catch (e) {
       print('Erreur lors de la réinitialisation des stats: $e');
       return false;
     }
   }
+
+  PlayerStats get currentStats => _cachedStats ?? PlayerStats();
 }
 
 

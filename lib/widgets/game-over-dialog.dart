@@ -61,7 +61,7 @@ class DialogService {
                       ),
                     ),
                     Text(
-                      '$level/${paterns.length}',
+                      '${playerStats.completedLevelsCount}/${paterns.length}',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -166,7 +166,7 @@ class DialogService {
                           onRestart();
                         NavigationService.goBack();
                         NavigationService.navigateReplacementTo(HomeScreen(
-                          playerStats: playerStats,
+                          // playerStats: playerStats,
                         ));
                       },
                       style: ElevatedButton.styleFrom(

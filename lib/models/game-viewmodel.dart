@@ -2,10 +2,12 @@ import 'dart:async';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:puzzle/models/game-model.dart';
+import 'package:puzzle/providers/navigation-service.dart';
 import 'package:puzzle/providers/player-stats-service.dart';
 import 'package:puzzle/widgets/game-over-dialog.dart';
 
 class GameViewModel with ChangeNotifier implements GameActions {
+  final PlayerStatsManager playerStatsManager;
   final PaternModel paternModel;
   late Timer _timer;
 
@@ -35,8 +37,8 @@ class GameViewModel with ChangeNotifier implements GameActions {
   bool _win = false;
   String _timeDisplay = "1:00:00";
 
-  // Player stats
-  PlayerStats? _playerStats;
+  // // Player stats
+  // PlayerStats? _playerStats;
 
   // Conffiti celebration
   late ConfettiController controllerCenterRight;
@@ -45,8 +47,12 @@ class GameViewModel with ChangeNotifier implements GameActions {
   Color? _selectedColor;
   bool firstPassage = false;
   bool firstPassage2 = false;
+  int consecutiveRepetStageCount = 0;
 
-  GameViewModel({required this.paternModel}) {
+  // GameViewModel({required this.paternModel}) {
+  //   _initializeGame();
+  // }
+  GameViewModel({required this.playerStatsManager, required this.paternModel}) {
     _initializeGame();
   }
 
@@ -71,10 +77,16 @@ class GameViewModel with ChangeNotifier implements GameActions {
     startTimer();
   }
 
+  // Future<void> _loadPlayerStats() async {
+  //   _playerStats = await PlayerStatsManager.loadStats();
+  //   _playerStats!.currentLevel = level;
+  //   await PlayerStatsManager.saveStats(_playerStats!);
+  //   notifyListeners();
+  // }
   Future<void> _loadPlayerStats() async {
-    _playerStats = await PlayerStatsManager.loadStats();
-    _playerStats!.currentLevel = level;
-    await PlayerStatsManager.saveStats(_playerStats!);
+    final playerStats = playerStatsManager.currentStats;
+    playerStats.currentLevel = level;
+    await playerStatsManager.saveStats(playerStats);
     notifyListeners();
   }
 
@@ -110,9 +122,10 @@ class GameViewModel with ChangeNotifier implements GameActions {
   }
 
   void handleWin(BuildContext context) {
-    _playerStats!.levelCompleted(
+    final playerStats = playerStatsManager.currentStats;
+    playerStats.levelCompleted(
         level, Duration(seconds: paternModel.timeRemaining - _timeRemaining));
-    PlayerStatsManager.saveStats(_playerStats!);
+    playerStatsManager.saveStats(playerStats);
     // Trigger win dialog or navigation
     DialogService.showWinDialog(
       context,
@@ -173,6 +186,8 @@ class GameViewModel with ChangeNotifier implements GameActions {
       }
       notifyListeners();
 
+      int initialPathLength = diamondPath.length; // 2
+
       if (collectedStars.length != stars.length) {
         if (action[0] == Move.moveFoward && move) {
           List<int> newPosition;
@@ -194,6 +209,7 @@ class GameViewModel with ChangeNotifier implements GameActions {
           }
 
           diamondPath.add(PathStep(newPosition, currentDirection));
+          consecutiveRepetStageCount = 0;
           for (var star in stars) {
             if (samePosition(newPosition, star) &&
                 !collectedStars.contains(star)) {
@@ -206,23 +222,66 @@ class GameViewModel with ChangeNotifier implements GameActions {
           final newDirection = (currentDirection + 3) % 4;
           diamondPath.add(PathStep(List.from(lastPosition), newDirection,
               isRotation: true));
+          consecutiveRepetStageCount = 0;
           notifyListeners();
         } else if (action[0] == Move.rotatRight && move) {
           final newDirection = (currentDirection + 1) % 4;
           diamondPath.add(PathStep(List.from(lastPosition), newDirection,
               isRotation: true));
+          consecutiveRepetStageCount = 0;
           notifyListeners();
         } else if (action[0] == Move.repetStage0 && move) {
+          // if (diamondPath.length == initialPathLength) {
+          consecutiveRepetStageCount++;
+          notifyListeners();
+          // Si plus de 2 répétitions sans progression
+          if (consecutiveRepetStageCount >= 2) {
+            alertRepetition();
+            // Réinitialiser le compteur
+            consecutiveRepetStageCount = 0;
+            notifyListeners();
+            return;
+          }
+          // }
+
           if (diamondPath.length > 100) return;
           addPointToPath(true);
           return;
         } else if (action[0] == Move.repetStage1 && move) {
+          // if (diamondPath.length == initialPathLength) {
+          consecutiveRepetStageCount++;
+          // Si plus de 2 répétitions sans progression
+          if (consecutiveRepetStageCount >= 2) {
+            alertRepetition();
+            // Réinitialiser le compteur
+            consecutiveRepetStageCount = 0;
+            notifyListeners();
+            return;
+          }
+          // }
+
+          notifyListeners();
           if (diamondPath.length > 100) return;
           addPointToPath(false);
           return;
         }
       }
     });
+  }
+
+  void alertRepetition() {
+    showDialog(
+      context: NavigationService.navigatorKey.currentContext!,
+      builder: (context) => AlertDialog(
+        title: Text('Avertissement'),
+        content: Text(
+            'Vous semblez répéter des actions sans progresser. Vérifiez votre algorithme.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(), child: Text('OK'))
+        ],
+      ),
+    );
   }
 
   @override
@@ -279,7 +338,7 @@ class GameViewModel with ChangeNotifier implements GameActions {
   bool get gameOver => _gameOver;
   bool get win => _win;
   int get currentDirection => _currentDirection;
-  PlayerStats get playerStats => _playerStats!;
+  // PlayerStats get playerStats => _playerStats!;
 
   // Other necessary methods and getters
 }

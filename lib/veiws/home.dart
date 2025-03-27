@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:puzzle/veiws/game-view.dart';
 import 'package:puzzle/providers/navigation-service.dart';
 import 'package:puzzle/providers/player-stats-service.dart';
@@ -10,15 +11,16 @@ import 'package:puzzle/widgets/level-selection-list.dart';
 import 'package:puzzle/widgets/stats-panel.dart';
 
 class HomeScreen extends StatefulWidget {
-  PlayerStats playerStats;
-  HomeScreen({super.key, required this.playerStats});
+  // PlayerStats playerStats;
+  // HomeScreen({super.key, required this.playerStats});
+  HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  PlayerStats? _playerStats;
+  // PlayerStats? _playerStats;
   bool firstTime = true;
 
   // @override
@@ -27,17 +29,17 @@ class _HomeScreenState extends State<HomeScreen> {
   //   _loadPlayerStats();
   // }
 
-  Future<void> _loadPlayerStats() async {
-    _playerStats = await PlayerStatsManager.loadStats();
-    firstTime = PlayerStatsManager.firstTime;
-    setState(() {});
-  }
+  // Future<void> _loadPlayerStats() async {
+  //   _playerStats = await PlayerStatsManager.loadStats();
+  //   firstTime = PlayerStatsManager.firstTime;
+  //   setState(() {});
+  // }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _loadPlayerStats();
-  }
+  // @override
+  // void didChangeDependencies() {
+  //   super.didChangeDependencies();
+  //   _loadPlayerStats();
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +59,8 @@ class _HomeScreenState extends State<HomeScreen> {
         isSmallScreen ? 16 : (isLargeScreen ? 22 : 18);
     final double topPadding = screenSize.height * 0.08;
     final double spacing = screenSize.height * 0.03;
+
+    final playerStatsManager = Provider.of<PlayerStatsManager>(context);
 
     return Scaffold(
       body: Container(
@@ -158,7 +162,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           onPressed: () {
                             NavigationService.navigateTo(GameScreen(
                               paternModel:
-                                  paterns[_playerStats!.currentLevel - 1],
+                                  paterns[playerStatsManager.currentStats.currentLevel - 1],
                             ));
                             // Navigator.push(
                             //   context,
@@ -193,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         ElevatedButton(
                           onPressed: () {
-                            showLevelSelectionModal(context);
+                            showLevelSelectionModal(context,playerStatsManager);
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF444444),
@@ -218,7 +222,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         StatsPanel(
                           isSmallScreen: isSmallScreen,
                           isLargeScreen: isLargeScreen,
-                          playerStats: _playerStats ?? widget.playerStats,
+                          playerStats: playerStatsManager.currentStats,
+                          // playerStats: _playerStats ?? widget.playerStats,
                         )
                       ],
                     ),
@@ -232,7 +237,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void showLevelSelectionModal(BuildContext context) {
+  void showLevelSelectionModal(BuildContext context, PlayerStatsManager playerStatsManager) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Color(0xFF1E1E2E),
@@ -262,7 +267,7 @@ class _HomeScreenState extends State<HomeScreen> {
               SizedBox(height: 16),
               Expanded(
                 child: LevelSelectionList(
-                  playerStats: _playerStats!,
+                  playerStats: playerStatsManager.currentStats,
                 ),
               ),
             ],

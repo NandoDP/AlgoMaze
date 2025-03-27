@@ -41,7 +41,7 @@ class _TopbarwidgetState extends State<Topbarwidget> {
           IconButton(
             onPressed: () {
               NavigationService.navigateReplacementTo(HomeScreen(
-                playerStats: viewModel.playerStats,
+                // playerStats: viewModel.playerStats,
               ));
               // Navigator.pushReplacement(
               //   context,

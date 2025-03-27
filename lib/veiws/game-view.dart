@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:puzzle/models/game-model.dart';
 import 'package:puzzle/models/game-viewmodel.dart';
+import 'package:puzzle/providers/player-stats-service.dart';
 import 'package:puzzle/widgets/action-buttons-widget.dart';
 import 'package:puzzle/widgets/commands-indicator-widget.dart';
 import 'package:puzzle/widgets/confetti-widget.dart';
@@ -16,18 +17,19 @@ class GameScreen extends StatelessWidget {
 
   const GameScreen({Key? key, required this.paternModel}) : super(key: key);
 
-  @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => GameViewModel(paternModel: paternModel),
-      child: Scaffold(
-        body: _GameScreenContent(),
-      ),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return ChangeNotifierProvider(
+//       create: (_) => GameViewModel(paternModel: paternModel),
+//       child: Scaffold(
+//         body: _GameScreenContent(),
+//       ),
+//     );
+//   }
+// }
 
-class _GameScreenContent extends StatelessWidget {
+// class _GameScreenContent extends StatelessWidget {
+
   // ConfettiController controllerCenterLeft =
   //     ConfettiController(duration: const Duration(seconds: 5));
   // ConfettiController controllerCenterRight =
@@ -37,14 +39,15 @@ class _GameScreenContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final viewModel = Provider.of<GameViewModel>(context);
+    final playerStatsManager = Provider.of<PlayerStatsManager>(context);
+    // final viewModel = Provider.of<GameViewModel>(context);
     final screenSize = MediaQuery.of(context).size;
     final isPortrait = screenSize.height > screenSize.width;
     final smallScreen = screenSize.shortestSide < 600;
 
     return Scaffold(
-        body: ChangeNotifierProvider.value(
-      value: viewModel,
+        body: ChangeNotifierProvider(
+      create: (context) => GameViewModel(paternModel: paternModel, playerStatsManager: playerStatsManager),
       child: Consumer<GameViewModel>(
         builder: (context, viewModel, child) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -83,7 +86,7 @@ class _GameScreenContent extends StatelessWidget {
         Topbarwidget(),
         Timerlevelwidget(),
         if (!inRow) ...[
-          Controlbuttons(),
+          Controlbuttons(isPortrait: true),
           SizedBox(
             height: screenSize.height - screenSize.width > 400
                 ? screenSize.width
@@ -95,7 +98,7 @@ class _GameScreenContent extends StatelessWidget {
           Expanded(
             flex: 7,
             child: Row(
-              children: [Gridgamewidget(), Controlbuttons()],
+              children: [Gridgamewidget(), Controlbuttons(isPortrait: true)],
             ),
           ),
         ],
@@ -124,7 +127,7 @@ class _GameScreenContent extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    Controlbuttons(),
+                    Controlbuttons(isPortrait: false),
                     PathindIcatorWidget(),
                     ActionButtonsWidget(),
                     CommandsIndicatorWidget(),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
+import 'package:provider/provider.dart';
 import 'package:puzzle/providers/player-stats-service.dart';
 import 'package:puzzle/paterns.dart';
 
@@ -31,6 +32,7 @@ class _StatsPanelState extends State<StatsPanel> {
     final double spacing =
         widget.isSmallScreen ? 15 : (widget.isLargeScreen ? 25 : 20);
 
+    final playerStatsManager = Provider.of<PlayerStatsManager>(context);
     return Container(
       padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
@@ -84,7 +86,7 @@ class _StatsPanelState extends State<StatsPanel> {
                       false;
 
                   if (confirmed) {
-                    final success = await PlayerStatsManager.resetAllStats();
+                    final success = await playerStatsManager.resetAllStats();
                     setState(() {});
 
                     if (success) {

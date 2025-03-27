@@ -7,13 +7,15 @@ import 'package:puzzle/models/game-viewmodel.dart';
 import 'package:puzzle/widgets/controle-button.dart';
 
 class Controlbuttons extends StatefulWidget {
-  const Controlbuttons({super.key});
+  final bool isPortrait;
+  const Controlbuttons({super.key, required this.isPortrait});
 
   @override
   State<Controlbuttons> createState() => _ControlbuttonsState();
 }
 
-class _ControlbuttonsState extends State<Controlbuttons> with TickerProviderStateMixin  {
+class _ControlbuttonsState extends State<Controlbuttons>
+    with TickerProviderStateMixin {
   // Variables animation
   late AnimationController _positionController;
   late AnimationController _rotationController;
@@ -29,20 +31,21 @@ class _ControlbuttonsState extends State<Controlbuttons> with TickerProviderStat
     bool inRow = (screenSize.width - screenSize.height * 0.7) > 0;
     final smallScreen = screenSize.shortestSide < 600;
 
-    if (!inRow) {
-      return Row(
+    if (inRow && widget.isPortrait) {
+      return Column(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: _widgetControlButtons(context, smallScreen, viewModel),
       );
     } else {
-      return Column(
+      return Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: _widgetControlButtons(context, smallScreen, viewModel),
       );
     }
   }
 
-  List<Widget> _widgetControlButtons(BuildContext context, bool smallScreen, GameViewModel viewModel) {
+  List<Widget> _widgetControlButtons(
+      BuildContext context, bool smallScreen, GameViewModel viewModel) {
     final buttonSize = smallScreen ? 32.0 : 40.0;
     final iconSize = smallScreen ? 16.0 : 20.0;
 
@@ -135,7 +138,8 @@ class _ControlbuttonsState extends State<Controlbuttons> with TickerProviderStat
         .toList();
 
     // Créer une liste d'angles
-    _angles = viewModel.diamondPath.map((step) => step.direction * (pi / 2)).toList();
+    _angles =
+        viewModel.diamondPath.map((step) => step.direction * (pi / 2)).toList();
 
     // Initialiser les controllers
     int totalSteps = _points.length;
@@ -182,7 +186,8 @@ class _ControlbuttonsState extends State<Controlbuttons> with TickerProviderStat
           viewModel.setIsAnimatedValue(false);
           _currentStepIndex = 0;
           viewModel.diamant = List.from(viewModel.diamondPath[0].position);
-          viewModel.setCurrentDirectionValue(viewModel.diamondPath[0].direction);
+          viewModel
+              .setCurrentDirectionValue(viewModel.diamondPath[0].direction);
           viewModel.firstPassage = false;
           viewModel.firstPassage2 = false;
         });
@@ -198,12 +203,17 @@ class _ControlbuttonsState extends State<Controlbuttons> with TickerProviderStat
           // Trouver le segment actuel
           double animValue = _positionController.value;
           int segmentIndex = (animValue * (positionAnimations.length)).floor();
-          segmentIndex = segmentIndex.clamp(0, positionAnimations.length - 1);
+          segmentIndex = positionAnimations.isNotEmpty
+              ? segmentIndex.clamp(0, positionAnimations.length - 1)
+              : 0;
 
           // Update la position du diamant en fonction du segment actuel
           if (segmentIndex < positionAnimations.length) {
             final animation = positionAnimations[segmentIndex];
-            viewModel.diamant = [animation.value.dx.round(), animation.value.dy.round()];
+            viewModel.diamant = [
+              animation.value.dx.round(),
+              animation.value.dy.round()
+            ];
           }
         }
       });
@@ -221,16 +231,20 @@ class _ControlbuttonsState extends State<Controlbuttons> with TickerProviderStat
           // Trouver l'étape de rotation actuelle
           double fraction = _rotationController.value;
           int stepIndex = (fraction * (_angles.length - 1)).floor();
-          stepIndex = stepIndex.clamp(0, _angles.length - 2);
+          if (_angles.length > 1) {
+            stepIndex = stepIndex.clamp(0, _angles.length - 2);
 
-          // Calculer l'angle de rotation
-          double startAngle = _angles[stepIndex];
-          double endAngle = _angles[stepIndex + 1];
-          double localFraction = (fraction * (_angles.length - 1)) - stepIndex;
+            // Calculer l'angle de rotation
+            double startAngle = _angles[stepIndex];
+            double endAngle = _angles[stepIndex + 1];
+            double localFraction =
+                (fraction * (_angles.length - 1)) - stepIndex;
 
-          double currentAngle =
-              startAngle + (endAngle - startAngle) * localFraction;
-          viewModel.setCurrentDirectionValue(((currentAngle / (pi / 2)) % 4).round());
+            double currentAngle =
+                startAngle + (endAngle - startAngle) * localFraction;
+            viewModel.setCurrentDirectionValue(
+                ((currentAngle / (pi / 2)) % 4).round());
+          }
         }
       });
     });
