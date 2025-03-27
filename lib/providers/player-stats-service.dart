@@ -134,3 +134,56 @@ class PlayerStatsManager {
     }
   }
 }
+
+
+
+
+
+
+// class PlayerStats {
+//   int currentLevel;
+//   List<LevelCompletion> completedLevels;
+
+//   PlayerStats({
+//     this.currentLevel = 1,
+//     List<LevelCompletion>? completedLevels,
+//   }) : completedLevels = completedLevels ?? [];
+
+//   void levelCompleted(int level, Duration timeTaken) {
+//     // Check if level already exists
+//     var existingLevel = completedLevels.firstWhere(
+//       (l) => l.level == level, 
+//       orElse: () {
+//         var newLevel = LevelCompletion(level: level, bestTime: timeTaken);
+//         completedLevels.add(newLevel);
+//         return newLevel;
+//       }
+//     );
+
+//     // Update best time if current time is faster
+//     if (timeTaken < existingLevel.bestTime) {
+//       existingLevel.bestTime = timeTaken;
+//     }
+//   }
+// }
+
+// class LevelCompletion {
+//   int level;
+//   Duration bestTime;
+
+//   LevelCompletion({
+//     required this.level, 
+//     required this.bestTime
+//   });
+// }
+
+// class PlayerStatsManager {
+//   static Future<PlayerStats> loadStats() async {
+//     // Implement actual loading logic (e.g., from SharedPreferences or a database)
+//     return PlayerStats();
+//   }
+
+//   static Future<void> saveStats(PlayerStats stats) async {
+//     // Implement actual saving logic
+//   }
+// }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:puzzle/home.dart';
-import 'package:puzzle/player-model.dart';
+import 'package:puzzle/providers/navigation-service.dart';
+import 'package:puzzle/providers/player-stats-service.dart';
+import 'package:puzzle/veiws/home.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,6 +25,7 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFF1A1A2E),
         brightness: Brightness.dark,
       ),
+      navigatorKey: NavigationService.navigatorKey,
       home: HomeScreen(playerStats: playerStats),
     );
   }

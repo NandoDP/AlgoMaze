@@ -1,67 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:puzzle/actions.dart';
+import 'package:puzzle/models/game-model.dart';
 
-class Patern {
-  final int niveau;
-  final List<List<int>> tile;
-  List<List<int>>? orangeTile;
-  List<List<int>>? violetTile;
-  final int direction;
-  final List<dynamic> buttons;
-  final int steps0;
-  int? steps1;
-  final List<int> diamant;
-  final List<List<int>> star;
-  final int timeRemaining;
-  Patern({
-    required this.niveau,
-    required this.tile,
-    this.orangeTile,
-    this.violetTile,
-    required this.direction,
-    required this.buttons,
-    required this.steps0,
-    this.steps1,
-    required this.diamant,
-    required this.star,
-    required this.timeRemaining,
-  });
 
-  Patern copyWith({
-    int? niveau,
-    List<List<int>>? tile,
-    List<List<int>>? orangeTile,
-    List<List<int>>? violetTile,
-    int? direction,
-    List<dynamic>? buttons,
-    int? steps0,
-    int? steps1,
-    List<int>? diamant,
-    List<List<int>>? star,
-    int? timeRemaining,
-  }) {
-    return Patern(
-      niveau: niveau ?? this.niveau,
-      tile: tile ?? this.tile,
-      orangeTile: orangeTile ?? this.orangeTile,
-      violetTile: violetTile ?? this.violetTile,
-      direction: direction ?? this.direction,
-      buttons: buttons ?? this.buttons,
-      steps0: steps0 ?? this.steps0,
-      steps1: steps1 ?? this.steps1,
-      diamant: diamant ?? this.diamant,
-      star: star ?? this.star,
-      timeRemaining: timeRemaining ?? this.timeRemaining,
-    );
-  }
-
-  @override
-  String toString() {
-    return 'Patern(niveau: $niveau, tile: $tile, orangeTile: $orangeTile, violetTile: $violetTile, direction: $direction, buttons: $buttons, steps0: $steps0, steps1: $steps1, diamant: $diamant, star: $star, timeRemaining: $timeRemaining)';
-  }
-}
-
-List<Patern> paterns = [
+List<PaternModel> paterns = [
   patern1,
   patern2,
   patern3,
@@ -72,7 +13,7 @@ List<Patern> paterns = [
   patern8,
 ];
 
-Patern patern1 = Patern(
+PaternModel patern1 = PaternModel(
   niveau: 1,
   tile: [
     [5, 7],
@@ -92,7 +33,7 @@ Patern patern1 = Patern(
   timeRemaining: 600,
 );
 
-Patern patern2 = Patern(
+PaternModel patern2 = PaternModel(
   niveau: 2,
   tile: [
     [13, 2],
@@ -124,7 +65,7 @@ Patern patern2 = Patern(
   timeRemaining: 900,
 );
 
-Patern patern3 = Patern(
+PaternModel patern3 = PaternModel(
   niveau: 3,
   tile: [
     [10, 2], [10, 1], //
@@ -153,7 +94,7 @@ Patern patern3 = Patern(
   timeRemaining: 1200,
 );
 
-Patern patern4 = Patern(
+PaternModel patern4 = PaternModel(
   niveau: 4,
   tile: [
     [2, 8],
@@ -200,7 +141,7 @@ Patern patern4 = Patern(
   timeRemaining: 1200,
 );
 
-Patern patern5 = Patern(
+PaternModel patern5 = PaternModel(
   niveau: 5,
   tile: [
     [6, 6],
@@ -238,7 +179,7 @@ Patern patern5 = Patern(
   timeRemaining: 1200,
 );
 
-Patern patern6 = Patern(
+PaternModel patern6 = PaternModel(
   niveau: 6,
   tile: [
     [5, 5], [5, 6], [5, 7], [5, 8], [5, 9],
@@ -276,7 +217,7 @@ Patern patern6 = Patern(
   timeRemaining: 1200,
 );
 
-Patern patern7 = Patern(
+PaternModel patern7 = PaternModel(
   niveau: 7,
   tile: [
     [2, 8],
@@ -325,7 +266,7 @@ Patern patern7 = Patern(
   timeRemaining: 1200,
 );
 
-Patern patern8 = Patern(
+PaternModel patern8 = PaternModel(
   niveau: 8,
   tile: [
     [2, 6],
