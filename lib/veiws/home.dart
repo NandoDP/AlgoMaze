@@ -61,6 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final double spacing = screenSize.height * 0.03;
 
     final playerStatsManager = Provider.of<PlayerStatsManager>(context);
+    firstTime = playerStatsManager.firstTime;
 
     return Scaffold(
       body: Container(

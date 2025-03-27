@@ -14,33 +14,11 @@ import 'package:puzzle/widgets/top-bar-widget.dart';
 
 class GameScreen extends StatelessWidget {
   final PaternModel paternModel;
-
-  const GameScreen({Key? key, required this.paternModel}) : super(key: key);
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return ChangeNotifierProvider(
-//       create: (_) => GameViewModel(paternModel: paternModel),
-//       child: Scaffold(
-//         body: _GameScreenContent(),
-//       ),
-//     );
-//   }
-// }
-
-// class _GameScreenContent extends StatelessWidget {
-
-  // ConfettiController controllerCenterLeft =
-  //     ConfettiController(duration: const Duration(seconds: 5));
-  // ConfettiController controllerCenterRight =
-  //     ConfettiController(duration: const Duration(seconds: 5));
-
-  // final GameViewModel viewModel;
+  const GameScreen({super.key, required this.paternModel});
 
   @override
   Widget build(BuildContext context) {
     final playerStatsManager = Provider.of<PlayerStatsManager>(context);
-    // final viewModel = Provider.of<GameViewModel>(context);
     final screenSize = MediaQuery.of(context).size;
     final isPortrait = screenSize.height > screenSize.width;
     final smallScreen = screenSize.shortestSide < 600;
@@ -103,10 +81,7 @@ class GameScreen extends StatelessWidget {
           ),
         ],
         PathindIcatorWidget(),
-        Confettiwidget(
-          // controllerCenterLeft: controllerCenterLeft,
-          // controllerCenterRight: controllerCenterRight,
-        ),
+        Confettiwidget(),
         Expanded(child: ActionButtonsWidget()),
         CommandsIndicatorWidget(),
         const SizedBox(height: 15),
@@ -145,10 +120,7 @@ class GameScreen extends StatelessWidget {
                 flex: 6,
                 child: Gridgamewidget(),
               ),
-              Confettiwidget(
-                // controllerCenterLeft: controllerCenterLeft,
-                // controllerCenterRight: controllerCenterRight,
-              )
+              Confettiwidget()
             ],
           ),
         ),

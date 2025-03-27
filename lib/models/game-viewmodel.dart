@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:puzzle/models/game-model.dart';
 import 'package:puzzle/providers/navigation-service.dart';
 import 'package:puzzle/providers/player-stats-service.dart';
-import 'package:puzzle/widgets/game-over-dialog.dart';
+import 'package:puzzle/widgets/game-dialog.dart';
 
 class GameViewModel with ChangeNotifier implements GameActions {
   final PlayerStatsManager playerStatsManager;
@@ -186,7 +186,7 @@ class GameViewModel with ChangeNotifier implements GameActions {
       }
       notifyListeners();
 
-      int initialPathLength = diamondPath.length; // 2
+      // int initialPathLength = diamondPath.length; // 2
 
       if (collectedStars.length != stars.length) {
         if (action[0] == Move.moveFoward && move) {
@@ -231,34 +231,30 @@ class GameViewModel with ChangeNotifier implements GameActions {
           consecutiveRepetStageCount = 0;
           notifyListeners();
         } else if (action[0] == Move.repetStage0 && move) {
-          // if (diamondPath.length == initialPathLength) {
           consecutiveRepetStageCount++;
           notifyListeners();
           // Si plus de 2 répétitions sans progression
-          if (consecutiveRepetStageCount >= 2) {
+          if (consecutiveRepetStageCount > 2) {
             alertRepetition();
             // Réinitialiser le compteur
             consecutiveRepetStageCount = 0;
             notifyListeners();
             return;
           }
-          // }
 
           if (diamondPath.length > 100) return;
           addPointToPath(true);
           return;
         } else if (action[0] == Move.repetStage1 && move) {
-          // if (diamondPath.length == initialPathLength) {
           consecutiveRepetStageCount++;
           // Si plus de 2 répétitions sans progression
-          if (consecutiveRepetStageCount >= 2) {
+          if (consecutiveRepetStageCount > 2) {
             alertRepetition();
             // Réinitialiser le compteur
             consecutiveRepetStageCount = 0;
             notifyListeners();
             return;
           }
-          // }
 
           notifyListeners();
           if (diamondPath.length > 100) return;
